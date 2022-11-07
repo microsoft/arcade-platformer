@@ -1,0 +1,20 @@
+{
+    "name": "my-project",
+    "version": "0.0.0",
+    "files": [
+        "custom.ts",
+        "api.ts",
+        "main.ts"
+    ],
+    "supportedTargets": [
+        "arcade"
+    ],
+    "dependencies": {
+        "device": "*"
+    },
+    "testDependencies": {},
+    "testFiles": [
+        "testAssets.ts",
+        "test.ts"
+    ]
+}
