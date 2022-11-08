@@ -209,27 +209,14 @@ namespace platformer {
                         svy = (ctrl.down.isPressed() ? 256 : 0) - (ctrl.up.isPressed() ? 256 : 0)
                     }
 
-                    let svxInCricle = svx
-                    let svyInCircle = svy
-
-                    // here svx/y are -256 to 256 range
-                    const sq = svx * svx + svy * svy
-                    // we want to limit svx/y to be within circle of 256 radius
-                    const max = 256 * 256
-                    // is it outside the circle?
-                    if (sq > max) {
-                        // if so, store the vector scaled down to fit in the circle
-                        const scale = Math.sqrt(max / sq)
-                        svxInCricle = scale * svx | 0
-                        svyInCircle = scale * svy | 0
-                    }
-
                     if (sprite.pFlags & PlatformerFlags.MovementMomentum) {
                         if (this.gravityDirection === Direction.Up || this.gravityDirection === Direction.Down) {
                             vx = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
+                            svy = 0;
                         }
                         else {
                             vy = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
+                            svx = 0;
                         }
 
                         const acc = Fx8(sprite.constants.lookupValue(PlatformerConstant.MovementAcceleration));
