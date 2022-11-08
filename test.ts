@@ -73,3 +73,8 @@ game.onShade(() => {
         printState("Decelerating");
     }
 })
+
+
+controller.B.onEvent(ControllerButtonEvent.Pressed, () => {
+    setTimeout(() => mySprite.image.fill(3), 100)
+})

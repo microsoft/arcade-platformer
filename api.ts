@@ -33,7 +33,11 @@ namespace platformer {
         //% block="max jump height"
         MaxJumpHeight,
         //% block="movement acceleration"
-        MomentumAcceleration,
+        MovementAcceleration,
+        //% block="ground friction"
+        GroundFriction,
+        //% block="air friction"
+        AirFriction,
         //% block="wall jump height"
         WallJumpHeight,
         //% block="wall kickoff velocity"

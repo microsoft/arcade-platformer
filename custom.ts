@@ -10,6 +10,7 @@ namespace platformer {
         CoyoteTime = 1 << 7,
         MovementMomentum = 1 << 8,
         WallJumps = 1 << 9,
+        LastWallLeft = 1 << 10,
     }
 
     class PlatformerConstants {
@@ -40,7 +41,9 @@ namespace platformer {
         res.setValue(PlatformerConstant.CoyoteTimeMillis, 100)
         res.setValue(PlatformerConstant.MoveSpeed, 60)
         res.setValue(PlatformerConstant.MaxJumpHeight, 40)
-        res.setValue(PlatformerConstant.MomentumAcceleration, 700)
+        res.setValue(PlatformerConstant.MovementAcceleration, 700)
+        res.setValue(PlatformerConstant.GroundFriction, 700)
+        res.setValue(PlatformerConstant.AirFriction, 200)
         res.setValue(PlatformerConstant.WallJumpHeight, 30)
         res.setValue(PlatformerConstant.WallJumpKickoffVelocity, 100)
         res.setValue(PlatformerConstant.WallFriction, 500)
@@ -229,7 +232,7 @@ namespace platformer {
                             vy = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
                         }
 
-                        const acc = Fx8(sprite.constants.lookupValue(PlatformerConstant.MomentumAcceleration));
+                        const acc = Fx8(sprite.constants.lookupValue(PlatformerConstant.MovementAcceleration));
                         sprite.setStateFlag(PlatformerSpriteState.Turning, false);
                         sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
                         sprite.setStateFlag(PlatformerSpriteState.Accelerating, false);
@@ -336,9 +339,10 @@ namespace platformer {
                             sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, true);
                         }
                         else {
+                            const frictionAcc = Fx8(isOnGround(sprite, this.gravityDirection) ? sprite.constants.lookupValue(PlatformerConstant.GroundFriction) : sprite.constants.lookupValue(PlatformerConstant.AirFriction))
                             const friction = Fx.idiv(
                                 Fx.imul(
-                                    acc,
+                                    frictionAcc,
                                     dtMs
                                 ),
                                 1000
@@ -471,10 +475,7 @@ namespace platformer {
 
                 sprite.setStateFlag(PlatformerSpriteState.OnGround, onGround);
 
-                if (onWall) {
-                    sprite.lastOnWallTime = game.runtime();
-                }
-                else {
+                if (!onWall) {
                     sprite.setGravity(_state().gravity, _state().gravityDirection);
                     sprite.setStateFlag(PlatformerSpriteState.OnWallRight, false);
                     sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, false);
@@ -519,8 +520,31 @@ namespace platformer {
                     }
                 }
 
+                let shouldApplyFriction = false;
+
+                switch (_state().gravityDirection) {
+                    case Direction.Down:
+                        shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) > 0;
+                        break;
+                    case Direction.Up:
+                        shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) < 0;
+                        break;
+                    case Direction.Left:
+                        shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) < 0;
+                        break;
+                    case Direction.Right:
+                        shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) > 0;
+                        break;
+                }
+
+                shouldApplyFriction = shouldApplyFriction && onWall;
+
+                if (onWall) {
+                    sprite.setPlatformerFlag(PlatformerFlags.LastWallLeft, sprite.isHittingTile(CollisionDirection.Left));
+                }
+
                 let didWallJump = false;
-                if (onWall || ((sprite.pFlags & PlatformerFlags.CoyoteTime) && game.runtime() - sprite.lastOnWallTime < sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis))) {
+                if (shouldApplyFriction || ((sprite.pFlags & PlatformerFlags.CoyoteTime) && game.runtime() - sprite.lastOnWallTime < sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis))) {
                     if (sprite.jumpStartTime === undefined || currentTime - sprite.jumpStartTime > sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
                         if (sprite.pFlags & PlatformerFlags.JumpOnAPressed && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
                             if (currentTime - this.aButtonTimer[pIndex] < sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
@@ -544,23 +568,6 @@ namespace platformer {
                 if (onWall && !didWallJump) {
                     const friction = Fx8(sprite.constants.lookupValue(PlatformerConstant.WallFriction));
                     const minVelocity = Fx8(sprite.constants.lookupValue(PlatformerConstant.WallMinVelocity) || 0);
-
-                    let shouldApplyFriction = false;
-
-                    switch (_state().gravityDirection) {
-                        case Direction.Down:
-                            shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) > 0;
-                            break;
-                        case Direction.Up:
-                            shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) < 0;
-                            break;
-                        case Direction.Left:
-                            shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) < 0;
-                            break;
-                        case Direction.Right:
-                            shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) > 0;
-                            break;
-                    }
 
                     sprite.setStateFlag(PlatformerSpriteState.WallSliding, shouldApplyFriction);
                     if (shouldApplyFriction) {
@@ -611,6 +618,10 @@ namespace platformer {
                                 }
                                 sprite.ax = 0;
                                 break;
+                        }
+                        if (sprite.hasState(PlatformerSpriteState.OnWallLeft | PlatformerSpriteState.OnWallRight)) {
+                            sprite.setPlatformerFlag(PlatformerFlags.LastWallLeft, sprite.hasState(PlatformerSpriteState.OnWallLeft));
+                            sprite.lastOnWallTime = game.runtime();
                         }
                     }
                 }
@@ -675,10 +686,10 @@ namespace platformer {
             case Direction.Down:
                 sprite.vy = -Math.sqrt(2 * gravityStr * jumpHeight);
                 if (kickoffVelocity) {
-                    if (sprite.isHittingTile(CollisionDirection.Left)) {
+                    if (sprite.pFlags & PlatformerFlags.LastWallLeft) {
                         sprite.vx = kickoffVelocity;
                     }
-                    else if (sprite.isHittingTile(CollisionDirection.Right)) {
+                    else {
                         sprite.vx = -kickoffVelocity;
                     }
                 }
@@ -686,10 +697,10 @@ namespace platformer {
             case Direction.Up:
                 sprite.vy = Math.sqrt(2 * gravityStr * jumpHeight);
                 if (kickoffVelocity) {
-                    if (sprite.isHittingTile(CollisionDirection.Left)) {
+                    if (sprite.pFlags & PlatformerFlags.LastWallLeft) {
                         sprite.vx = kickoffVelocity;
                     }
-                    else if (sprite.isHittingTile(CollisionDirection.Right)) {
+                    else {
                         sprite.vx = -kickoffVelocity;
                     }
                 }
@@ -697,10 +708,10 @@ namespace platformer {
             case Direction.Right:
                 sprite.vx = -Math.sqrt(2 * gravityStr * jumpHeight);
                 if (kickoffVelocity) {
-                    if (sprite.isHittingTile(CollisionDirection.Top)) {
+                    if (sprite.pFlags & PlatformerFlags.LastWallLeft) {
                         sprite.vy = kickoffVelocity;
                     }
-                    else if (sprite.isHittingTile(CollisionDirection.Bottom)) {
+                    else {
                         sprite.vy = -kickoffVelocity;
                     }
                 }
@@ -708,10 +719,10 @@ namespace platformer {
             case Direction.Left:
                 sprite.vx = Math.sqrt(2 * gravityStr * jumpHeight);
                 if (kickoffVelocity) {
-                    if (sprite.isHittingTile(CollisionDirection.Top)) {
+                    if (sprite.pFlags & PlatformerFlags.LastWallLeft) {
                         sprite.vy = kickoffVelocity;
                     }
-                    else if (sprite.isHittingTile(CollisionDirection.Bottom)) {
+                    else {
                         sprite.vy = -kickoffVelocity;
                     }
                 }
