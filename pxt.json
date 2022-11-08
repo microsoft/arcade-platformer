@@ -1,6 +1,6 @@
 {
-    "name": "my-project",
-    "version": "0.0.0",
+    "name": "arcade-platformer",
+    "version": "0.0.1",
     "files": [
         "custom.ts",
         "api.ts",
