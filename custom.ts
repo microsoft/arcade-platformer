@@ -144,32 +144,32 @@ namespace platformer {
             this.aButtonTimer = [];
             this.aButtonIsPressed = [];
 
+            let registerHandlers = (ctrl: controller.Controller, index: number) => {
+                ctrl.A.addEventListener(ControllerButtonEvent.Pressed, () => {
+                    this.aButtonIsPressed[index] = true;
+                    this.aButtonTimer[index] = game.runtime();
+                });
+
+                ctrl.A.addEventListener(ControllerButtonEvent.Released, () => {
+                    this.aButtonIsPressed[index] = false;
+                });
+
+                ctrl.up.addEventListener(ControllerButtonEvent.Pressed, () => {
+                    this.upButtonIsPressed[index] = true;
+                    this.upButtonTimer[index] = game.runtime();
+                });
+
+                ctrl.up.addEventListener(ControllerButtonEvent.Released, () => {
+                    this.upButtonIsPressed[index] = false;
+                });
+            }
+
             for (let i = 0; i < controller.players().length; i++) {
-                const ctrl = controller.players()[i];
                 this.upButtonTimer.push(0);
                 this.upButtonIsPressed.push(false);
                 this.aButtonTimer.push(0);
                 this.aButtonIsPressed.push(false);
-
-                ctrl.A.addEventListener(ControllerButtonEvent.Pressed, () => {
-                    this.aButtonIsPressed[i] = true;
-                    this.aButtonTimer[i] = game.runtime();
-                    console.log("A pressed " + i)
-                });
-
-                ctrl.A.addEventListener(ControllerButtonEvent.Released, () => {
-                    this.aButtonIsPressed[i] = false;
-                    console.log("A released " + i)
-                });
-
-                ctrl.up.addEventListener(ControllerButtonEvent.Pressed, () => {
-                    this.upButtonIsPressed[i] = true;
-                    this.upButtonTimer[i] = game.runtime();
-                });
-
-                ctrl.up.addEventListener(ControllerButtonEvent.Released, () => {
-                    this.upButtonIsPressed[i] = false;
-                });
+                registerHandlers(controller.players()[i], i);
             }
 
             this.setTemplateFlag(PlatformerFlags.AllowJumpCancellation, true)
