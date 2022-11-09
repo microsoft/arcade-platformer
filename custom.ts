@@ -154,10 +154,12 @@ namespace platformer {
                 ctrl.A.addEventListener(ControllerButtonEvent.Pressed, () => {
                     this.aButtonIsPressed[i] = true;
                     this.aButtonTimer[i] = game.runtime();
+                    console.log("A pressed " + i)
                 });
 
                 ctrl.A.addEventListener(ControllerButtonEvent.Released, () => {
                     this.aButtonIsPressed[i] = false;
+                    console.log("A released " + i)
                 });
 
                 ctrl.up.addEventListener(ControllerButtonEvent.Pressed, () => {
