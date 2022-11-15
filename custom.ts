@@ -148,6 +148,7 @@ namespace platformer {
                 ctrl.A.addEventListener(ControllerButtonEvent.Pressed, () => {
                     this.aButtonIsPressed[index] = true;
                     this.aButtonTimer[index] = game.runtime();
+                    console.log(index);
                 });
 
                 ctrl.A.addEventListener(ControllerButtonEvent.Released, () => {
@@ -164,12 +165,19 @@ namespace platformer {
                 });
             }
 
-            for (let i = 0; i < controller.players().length; i++) {
+            const players = [
+                controller.player1,
+                controller.player2,
+                controller.player3,
+                controller.player4
+            ]
+
+            for (let i = 0; i < players.length; i++) {
                 this.upButtonTimer.push(0);
                 this.upButtonIsPressed.push(false);
                 this.aButtonTimer.push(0);
                 this.aButtonIsPressed.push(false);
-                registerHandlers(controller.players()[i], i);
+                registerHandlers(players[i], i);
             }
 
             this.setTemplateFlag(PlatformerFlags.AllowJumpCancellation, true)
@@ -471,7 +479,7 @@ namespace platformer {
                     sprite.setStateFlag(PlatformerSpriteState.WallSliding, false);
                 }
 
-                const pIndex = sprite.player.playerIndex;
+                const pIndex = sprite.player.playerIndex - 1;
 
                 if (onGround || ((sprite.pFlags & PlatformerFlags.CoyoteTime) && game.runtime() - sprite.lastOnGroundTime < sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis))) {
                     sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false);
