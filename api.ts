@@ -145,6 +145,7 @@ namespace platformer {
     //% moveSpeed.defl=60
     //% enabled.shadow=toggleOnOff
     //% enabled.defl=true
+    //% inlineInputMode=inline
     export function moveSprite(sprite: PlatformerSprite, enabled: boolean, moveSpeed?: number, player?: controller.Controller) {
         sprite.player = player || sprite.player || controller.player1
         if (enabled) {

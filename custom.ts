@@ -211,12 +211,14 @@ namespace platformer {
 
                     const ctrl = sprite.player;
 
-                    if (ctrl.analog) {
-                        svx = (ctrl.right.pressureLevel() - ctrl.left.pressureLevel()) >> 1
-                        svy = (ctrl.down.pressureLevel() - ctrl.up.pressureLevel()) >> 1
-                    } else {
-                        svx = (ctrl.right.isPressed() ? 256 : 0) - (ctrl.left.isPressed() ? 256 : 0)
-                        svy = (ctrl.down.isPressed() ? 256 : 0) - (ctrl.up.isPressed() ? 256 : 0)
+                    if (ctrl) {
+                        if (ctrl.analog) {
+                            svx = (ctrl.right.pressureLevel() - ctrl.left.pressureLevel()) >> 1
+                            svy = (ctrl.down.pressureLevel() - ctrl.up.pressureLevel()) >> 1
+                        } else {
+                            svx = (ctrl.right.isPressed() ? 256 : 0) - (ctrl.left.isPressed() ? 256 : 0)
+                            svy = (ctrl.down.isPressed() ? 256 : 0) - (ctrl.up.isPressed() ? 256 : 0)
+                        }
                     }
 
                     if (sprite.pFlags & PlatformerFlags.MovementMomentum) {
@@ -479,7 +481,7 @@ namespace platformer {
                     sprite.setStateFlag(PlatformerSpriteState.WallSliding, false);
                 }
 
-                const pIndex = sprite.player.playerIndex - 1;
+                const pIndex = sprite.player ? sprite.player.playerIndex - 1 : 0;
 
                 if (onGround || ((sprite.pFlags & PlatformerFlags.CoyoteTime) && game.runtime() - sprite.lastOnGroundTime < sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis))) {
                     sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false);
