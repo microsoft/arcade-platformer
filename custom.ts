@@ -129,11 +129,14 @@ namespace platformer {
         aButtonTimer: number[];
         aButtonIsPressed: boolean[];
 
+        animations: _PlatformerAnimationState;
+
         constructor() {
             this.gravity = 500;
             this.gravityDirection = Direction.Down;
 
             this.allSprites = [];
+            this.animations = new _PlatformerAnimationState();
 
             game.currentScene().eventContext.registerFrameHandler(scene.CONTROLLER_SPRITES_PRIORITY, () => {
                 this.moveSprites();
