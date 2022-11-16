@@ -11,7 +11,6 @@ namespace platformer {
 
     class CharacterState {
         protected animations: CharacterAnimation[];
-        protected lastState: number;
 
         protected timer: number;
         protected frame: number;
@@ -27,7 +26,6 @@ namespace platformer {
             this.animations = [];
             this.timer = 0;
             this.frame = 0;
-            this.lastState = 0;
             this.setEnabled(true);
 
             this.renderable = scene.createRenderable(this.sprite.z + 1, (target, camera) => {
@@ -164,10 +162,6 @@ namespace platformer {
         }
 
         protected pickRule(state: number) {
-            if (state === this.lastState) return null;
-
-            this.lastState = state;
-
             // If we have multiple animations with the same best score, we
             // want to prioritize the current animation and then the rest
             // by the order they were added
