@@ -50,6 +50,8 @@ namespace platformer {
         WallFriction,
         //% block="wall min velocity"
         WallMinVelocity,
+        //% block="max jumps before touching ground"
+        MaxJumpsBeforeTouchingGround,
     }
 
     export enum PlatformerSpriteState {

@@ -9,7 +9,7 @@ namespace platformer {
         }
     }
 
-    class CharacterState {
+    export class _CharacterState {
         protected animations: CharacterAnimation[];
 
         protected timer: number;
@@ -18,8 +18,6 @@ namespace platformer {
         protected enabled: boolean;
         protected runningStartFrames: boolean;
 
-        protected renderable: scene.Renderable;
-
         protected currentImage: Image;
 
         constructor(public sprite: PlatformerSprite) {
@@ -27,33 +25,33 @@ namespace platformer {
             this.timer = 0;
             this.frame = 0;
             this.setEnabled(true);
+        }
 
-            this.renderable = scene.createRenderable(this.sprite.z + 1, (target, camera) => {
-                if (!this.enabled || !this.currentImage) return;
+        draw(target: Image, camera: scene.Camera) {
+            if (!this.enabled || !this.currentImage) return;
 
-                let drawX = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetX;
-                let drawY = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetY;
-                switch (_state().gravityDirection) {
-                    case Direction.Down:
-                        drawX += this.sprite.x - (this.currentImage.width / 2);
-                        drawY += this.sprite.bottom - this.currentImage.height;
-                        break;
-                    case Direction.Up:
-                        drawX += this.sprite.x - (this.currentImage.width / 2);
-                        drawY += this.sprite.top;
-                        break;
-                    case Direction.Right:
-                        drawX += this.sprite.right - this.currentImage.width;
-                        drawY += this.sprite.y - (this.currentImage.height / 2);
-                        break;
-                    case Direction.Left:
-                        drawX += this.sprite.left;
-                        drawY += this.sprite.y - (this.currentImage.height / 2);
-                        break;
-                }
+            let drawX = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetX;
+            let drawY = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetY;
+            switch (_state().gravityDirection) {
+                case Direction.Down:
+                    drawX += this.sprite.x - (this.currentImage.width / 2);
+                    drawY += this.sprite.bottom - this.currentImage.height;
+                    break;
+                case Direction.Up:
+                    drawX += this.sprite.x - (this.currentImage.width / 2);
+                    drawY += this.sprite.top;
+                    break;
+                case Direction.Right:
+                    drawX += this.sprite.right - this.currentImage.width;
+                    drawY += this.sprite.y - (this.currentImage.height / 2);
+                    break;
+                case Direction.Left:
+                    drawX += this.sprite.left;
+                    drawY += this.sprite.y - (this.currentImage.height / 2);
+                    break;
+            }
 
-                target.drawTransparentImage(this.currentImage, drawX, drawY);
-            })
+            target.drawTransparentImage(this.currentImage, drawX, drawY);
         }
 
         setFrames(loop: boolean, frames: Image[], interval: number, rule: number) {
@@ -158,7 +156,7 @@ namespace platformer {
 
             if (!enabled) this.currentImage = undefined;
 
-            this.sprite.setFlag(SpriteFlag.Invisible, enabled);
+            this.sprite.setPlatformerFlag(PlatformerFlags.AnimationsEnabled, enabled);
         }
 
         protected pickRule(state: number) {
@@ -198,7 +196,7 @@ namespace platformer {
     }
 
     export class _PlatformerAnimationState {
-        characters: CharacterState[];
+        characters: _CharacterState[];
 
         constructor() {
             this.characters = [];
@@ -332,8 +330,9 @@ namespace platformer {
         }
 
         if (createIfNotFound) {
-            const newState = new CharacterState(sprite);
+            const newState = new _CharacterState(sprite);
             sceneState.characters.push(newState);
+            sprite.characterState = newState;
             return newState;
         }
         return undefined;

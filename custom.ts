@@ -11,6 +11,7 @@ namespace platformer {
         MovementMomentum = 1 << 8,
         WallJumps = 1 << 9,
         LastWallLeft = 1 << 10,
+        AnimationsEnabled = 1 << 11,
     }
 
     class PlatformerConstants {
@@ -62,6 +63,7 @@ namespace platformer {
         player: controller.Controller;
 
         constants: PlatformerConstants;
+        characterState: _CharacterState;
 
         constructor(img: Image) {
             super(img);
@@ -71,6 +73,14 @@ namespace platformer {
             this.pFlags = _state().templateFlags;
             this.constants = new PlatformerConstants(globalConstants);
             this.setStateFlag(PlatformerSpriteState.FacingRight, true);
+        }
+
+        __drawCore(camera: scene.Camera) {
+            if (this.characterState) this.characterState.draw(screen, camera);
+            if (this.pFlags & PlatformerFlags.AnimationsEnabled) {
+                return;
+            }
+            super.__drawCore(camera);
         }
 
         setPlatformerFlag(flag: number, enabled: boolean) {
