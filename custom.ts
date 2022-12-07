@@ -12,6 +12,8 @@ namespace platformer {
         WallJumps = 1 << 9,
         LastWallLeft = 1 << 10,
         AnimationsEnabled = 1 << 11,
+        WallRefreshesJumps = 1 << 12,
+        JumpButtonConsumed = 1 << 13
     }
 
     class PlatformerConstants {
@@ -49,6 +51,8 @@ namespace platformer {
         res.setValue(PlatformerConstant.WallJumpKickoffVelocity, 100)
         res.setValue(PlatformerConstant.WallFriction, 500)
         res.setValue(PlatformerConstant.WallMinVelocity, 50)
+        res.setValue(PlatformerConstant.MaxJumpsBeforeTouchingGround, 1)
+        res.setValue(PlatformerConstant.MaxInAirJumpHeight, 0) // 0 means use the normal jump height
         return res;
     }
 
@@ -60,6 +64,7 @@ namespace platformer {
         jumpStartTime: number;
         lastOnGroundTime: number;
         lastOnWallTime: number;
+        jumpsRemaining: number;
         player: controller.Controller;
 
         constants: PlatformerConstants;
@@ -73,6 +78,7 @@ namespace platformer {
             this.pFlags = _state().templateFlags;
             this.constants = new PlatformerConstants(globalConstants);
             this.setStateFlag(PlatformerSpriteState.FacingRight, true);
+            this.jumpsRemaining = 0;
         }
 
         __drawCore(camera: scene.Camera) {
@@ -161,11 +167,16 @@ namespace platformer {
                 ctrl.A.addEventListener(ControllerButtonEvent.Pressed, () => {
                     this.aButtonIsPressed[index] = true;
                     this.aButtonTimer[index] = game.runtime();
-                    console.log(index);
                 });
 
                 ctrl.A.addEventListener(ControllerButtonEvent.Released, () => {
                     this.aButtonIsPressed[index] = false;
+
+                    for (const sprite of this.allSprites) {
+                        if (sprite.player === ctrl && sprite.pFlags & PlatformerFlags.JumpOnAPressed) {
+                            sprite.setPlatformerFlag(PlatformerFlags.JumpButtonConsumed, false);
+                        }
+                    }
                 });
 
                 ctrl.up.addEventListener(ControllerButtonEvent.Pressed, () => {
@@ -175,6 +186,12 @@ namespace platformer {
 
                 ctrl.up.addEventListener(ControllerButtonEvent.Released, () => {
                     this.upButtonIsPressed[index] = false;
+
+                    for (const sprite of this.allSprites) {
+                        if (sprite.player === ctrl && !(sprite.pFlags & PlatformerFlags.JumpOnAPressed)) {
+                            sprite.setPlatformerFlag(PlatformerFlags.JumpButtonConsumed, false);
+                        }
+                    }
                 });
             }
 
@@ -499,6 +516,7 @@ namespace platformer {
                 if (onGround || ((sprite.pFlags & PlatformerFlags.CoyoteTime) && game.runtime() - sprite.lastOnGroundTime < sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis))) {
                     sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false);
                     sprite.setStateFlag(PlatformerSpriteState.JumpingUp, false);
+                    sprite.jumpsRemaining = sprite.constants.lookupValue(PlatformerConstant.MaxJumpsBeforeTouchingGround);
 
                     if (sprite.jumpStartTime === undefined || currentTime - sprite.jumpStartTime > sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
                         if (sprite.pFlags & PlatformerFlags.JumpOnAPressed && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
@@ -555,6 +573,7 @@ namespace platformer {
                     sprite.setPlatformerFlag(PlatformerFlags.LastWallLeft, sprite.isHittingTile(CollisionDirection.Left));
                 }
 
+                // Wall jumps
                 let didWallJump = false;
                 if (shouldApplyFriction || ((sprite.pFlags & PlatformerFlags.CoyoteTime) && game.runtime() - sprite.lastOnWallTime < sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis))) {
                     if (sprite.jumpStartTime === undefined || currentTime - sprite.jumpStartTime > sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
@@ -573,6 +592,11 @@ namespace platformer {
                             }
                         }
                     }
+
+                    if (didWallJump && sprite.pFlags & PlatformerFlags.WallRefreshesJumps) {
+                        sprite.jumpsRemaining = sprite.constants.lookupValue(PlatformerConstant.MaxJumpsBeforeTouchingGround) - 1;
+                    }
+
                     sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false);
                 }
 
@@ -639,6 +663,24 @@ namespace platformer {
                 }
                 else {
                     sprite.setStateFlag(PlatformerSpriteState.WallSliding, false);
+                }
+
+                // Multi-jumps
+                if (!onWall && !didWallJump && !(sprite.pFlags & PlatformerFlags.JumpButtonConsumed) && !onGround) {
+                    if (sprite.jumpsRemaining > 0) {
+                        if (sprite.pFlags & PlatformerFlags.JumpOnAPressed && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
+                            if (currentTime - this.aButtonTimer[pIndex] < sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
+                                startJump(sprite, this.gravity, this.gravityDirection, sprite.constants.lookupValue(PlatformerConstant.MaxInAirJumpHeight) || sprite.constants.lookupValue(PlatformerConstant.MaxJumpHeight));
+                                sprite.setPlatformerFlag(PlatformerFlags.JumpStartedWithA, true);
+                            }
+                        }
+                        if (sprite.pFlags & PlatformerFlags.JumpOnUpPressed && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
+                            if (currentTime - this.upButtonTimer[pIndex] < sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
+                                startJump(sprite, this.gravity, this.gravityDirection, sprite.constants.lookupValue(PlatformerConstant.MaxInAirJumpHeight) || sprite.constants.lookupValue(PlatformerConstant.MaxJumpHeight));
+                                sprite.setPlatformerFlag(PlatformerFlags.JumpStartedWithA, false);
+                            }
+                        }
+                    }
                 }
 
                 if (onGround) {
@@ -741,7 +783,9 @@ namespace platformer {
                 break;
         }
 
+        sprite.jumpsRemaining--;
         sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, true);
+        sprite.setPlatformerFlag(PlatformerFlags.JumpButtonConsumed, true);
         sprite.setStateFlag(PlatformerSpriteState.JumpingUp, true);
         sprite.jumpStartTime = game.runtime();
         sprite.lastOnGroundTime = - sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis)

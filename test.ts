@@ -22,6 +22,12 @@ platformer.moveSprite(
     true,
     100
 )
+
+platformer.setConstant(mySprite, platformer.PlatformerConstant.MaxJumpsBeforeTouchingGround, 2)
+platformer.setConstant(mySprite, platformer.PlatformerConstant.MaxInAirJumpHeight, 20)
+
+platformer.setFeatureEnabled(platformer.PlatformerFeatures.WallRefreshesJumps, true)
+
 game.onShade(() => {
     top = 5;
     if (mySprite.hasState(platformer.PlatformerSpriteState.FacingLeft)) {

@@ -25,6 +25,8 @@ namespace platformer {
         MovementMomentum = PlatformerFlags.MovementMomentum,
         //% block="wall jumps"
         WallJumps = PlatformerFlags.WallJumps,
+        //% block="wall refreshes jumps"
+        WallRefreshesJumps = PlatformerFlags.WallRefreshesJumps,
     }
 
     export enum PlatformerConstant {
@@ -52,6 +54,8 @@ namespace platformer {
         WallMinVelocity,
         //% block="max jumps before touching ground"
         MaxJumpsBeforeTouchingGround,
+        //% block="max in air jump height"
+        MaxInAirJumpHeight,
     }
 
     export enum PlatformerSpriteState {
