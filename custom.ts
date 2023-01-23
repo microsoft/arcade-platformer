@@ -523,112 +523,115 @@ namespace platformer {
                 }
 
                 let shouldApplyFriction = false;
-
-                switch (_state().gravityDirection) {
-                    case Direction.Down:
-                        shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) > 0;
-                        break;
-                    case Direction.Up:
-                        shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) < 0;
-                        break;
-                    case Direction.Left:
-                        shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) < 0;
-                        break;
-                    case Direction.Right:
-                        shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) > 0;
-                        break;
-                }
-
-                shouldApplyFriction = shouldApplyFriction && onWall;
-
-                if (onWall) {
-                    sprite.setPlatformerFlag(PlatformerFlags.LastWallLeft, sprite.isHittingTile(CollisionDirection.Left));
-                }
-
                 let didWallJump = false;
-                if (shouldApplyFriction || ((sprite.pFlags & PlatformerFlags.CoyoteTime) && game.runtime() - sprite.lastOnWallTime < sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis))) {
-                    if (sprite.jumpStartTime === undefined || currentTime - sprite.jumpStartTime > sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
-                        if (sprite.pFlags & PlatformerFlags.JumpOnAPressed && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
-                            if (currentTime - this.aButtonTimer[pIndex] < sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
-                                startJump(sprite, this.gravity, this.gravityDirection, sprite.constants.lookupValue(PlatformerConstant.WallJumpHeight), sprite.constants.lookupValue(PlatformerConstant.WallJumpKickoffVelocity));
-                                sprite.setPlatformerFlag(PlatformerFlags.JumpStartedWithA, true);
-                                didWallJump = true;
+
+                if (sprite.pFlags & PlatformerFlags.WallJumps) {
+                    switch (_state().gravityDirection) {
+                        case Direction.Down:
+                            shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) > 0;
+                            break;
+                        case Direction.Up:
+                            shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) < 0;
+                            break;
+                        case Direction.Left:
+                            shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) < 0;
+                            break;
+                        case Direction.Right:
+                            shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) > 0;
+                            break;
+                    }
+
+                    shouldApplyFriction = shouldApplyFriction && onWall;
+
+                    if (onWall) {
+                        sprite.setPlatformerFlag(PlatformerFlags.LastWallLeft, sprite.isHittingTile(CollisionDirection.Left));
+                    }
+
+
+                    if (shouldApplyFriction || ((sprite.pFlags & PlatformerFlags.CoyoteTime) && game.runtime() - sprite.lastOnWallTime < sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis))) {
+                        if (sprite.jumpStartTime === undefined || currentTime - sprite.jumpStartTime > sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
+                            if (sprite.pFlags & PlatformerFlags.JumpOnAPressed && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
+                                if (currentTime - this.aButtonTimer[pIndex] < sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
+                                    startJump(sprite, this.gravity, this.gravityDirection, sprite.constants.lookupValue(PlatformerConstant.WallJumpHeight), sprite.constants.lookupValue(PlatformerConstant.WallJumpKickoffVelocity));
+                                    sprite.setPlatformerFlag(PlatformerFlags.JumpStartedWithA, true);
+                                    didWallJump = true;
+                                }
+                            }
+                            if (sprite.pFlags & PlatformerFlags.JumpOnUpPressed && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
+                                if (currentTime - this.upButtonTimer[pIndex] < sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
+                                    startJump(sprite, this.gravity, this.gravityDirection, sprite.constants.lookupValue(PlatformerConstant.WallJumpHeight), sprite.constants.lookupValue(PlatformerConstant.WallJumpKickoffVelocity));
+                                    sprite.setPlatformerFlag(PlatformerFlags.JumpStartedWithA, false);
+                                    didWallJump = true;
+                                }
                             }
                         }
-                        if (sprite.pFlags & PlatformerFlags.JumpOnUpPressed && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
-                            if (currentTime - this.upButtonTimer[pIndex] < sprite.constants.lookupValue(PlatformerConstant.JumpGracePeriodMillis)) {
-                                startJump(sprite, this.gravity, this.gravityDirection, sprite.constants.lookupValue(PlatformerConstant.WallJumpHeight), sprite.constants.lookupValue(PlatformerConstant.WallJumpKickoffVelocity));
-                                sprite.setPlatformerFlag(PlatformerFlags.JumpStartedWithA, false);
-                                didWallJump = true;
+                        sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false);
+                    }
+
+                    // Wall friction
+                    if (onWall && !didWallJump) {
+                        const friction = Fx8(sprite.constants.lookupValue(PlatformerConstant.WallFriction));
+                        const minVelocity = Fx8(sprite.constants.lookupValue(PlatformerConstant.WallMinVelocity) || 0);
+
+                        sprite.setStateFlag(PlatformerSpriteState.WallSliding, shouldApplyFriction);
+                        if (shouldApplyFriction) {
+                            switch (_state().gravityDirection) {
+                                case Direction.Down:
+                                case Direction.Up:
+                                    sprite.setStateFlag(PlatformerSpriteState.OnWallRight, sprite.isHittingTile(CollisionDirection.Right))
+                                    sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, sprite.isHittingTile(CollisionDirection.Left))
+
+                                    const c1 = Fx.compare(sprite._vy, friction);
+                                    if (c1 < 0) // v < f, v += f
+                                        sprite._vy = Fx.min(Fx.zeroFx8, Fx.add(sprite._vy, friction));
+                                    else if (c1 > 0) // v > f, v -= f
+                                        sprite._vy = Fx.max(Fx.zeroFx8, Fx.sub(sprite._vy, friction));
+                                    else
+                                        sprite._vy = Fx.zeroFx8
+
+                                    if (Fx.compare(Fx.abs(sprite._vy), minVelocity) < 0) {
+                                        if (Fx.compare(sprite._vy, Fx.zeroFx8) < 0) {
+                                            sprite._vy = Fx.neg(minVelocity);
+                                        }
+                                        else {
+                                            sprite._vy = minVelocity
+                                        }
+                                    }
+                                    sprite.ay = 0;
+                                    break;
+                                case Direction.Left:
+                                case Direction.Right:
+                                    sprite.setStateFlag(PlatformerSpriteState.OnWallRight, sprite.isHittingTile(CollisionDirection.Bottom))
+                                    sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, sprite.isHittingTile(CollisionDirection.Top))
+
+                                    const c2 = Fx.compare(sprite._vx, friction);
+                                    if (c2 < 0) // v < f, v += f
+                                        sprite._vx = Fx.min(Fx.zeroFx8, Fx.add(sprite._vx, friction));
+                                    else if (c2 > 0) // v > f, v -= f
+                                        sprite._vx = Fx.max(Fx.zeroFx8, Fx.sub(sprite._vx, friction));
+                                    else
+                                        sprite._vx = Fx.zeroFx8
+
+                                    if (Fx.compare(Fx.abs(sprite._vx), minVelocity) < 0) {
+                                        if (Fx.compare(sprite._vx, Fx.zeroFx8) < 0) {
+                                            sprite._vx = Fx.neg(minVelocity);
+                                        }
+                                        else {
+                                            sprite._vx = minVelocity
+                                        }
+                                    }
+                                    sprite.ax = 0;
+                                    break;
+                            }
+                            if (sprite.hasState(PlatformerSpriteState.OnWallLeft | PlatformerSpriteState.OnWallRight)) {
+                                sprite.setPlatformerFlag(PlatformerFlags.LastWallLeft, sprite.hasState(PlatformerSpriteState.OnWallLeft));
+                                sprite.lastOnWallTime = game.runtime();
                             }
                         }
                     }
-                    sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false);
-                }
-
-                // Wall friction
-                if (onWall && !didWallJump) {
-                    const friction = Fx8(sprite.constants.lookupValue(PlatformerConstant.WallFriction));
-                    const minVelocity = Fx8(sprite.constants.lookupValue(PlatformerConstant.WallMinVelocity) || 0);
-
-                    sprite.setStateFlag(PlatformerSpriteState.WallSliding, shouldApplyFriction);
-                    if (shouldApplyFriction) {
-                        switch (_state().gravityDirection) {
-                            case Direction.Down:
-                            case Direction.Up:
-                                sprite.setStateFlag(PlatformerSpriteState.OnWallRight, sprite.isHittingTile(CollisionDirection.Right))
-                                sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, sprite.isHittingTile(CollisionDirection.Left))
-
-                                const c1 = Fx.compare(sprite._vy, friction);
-                                if (c1 < 0) // v < f, v += f
-                                    sprite._vy = Fx.min(Fx.zeroFx8, Fx.add(sprite._vy, friction));
-                                else if (c1 > 0) // v > f, v -= f
-                                    sprite._vy = Fx.max(Fx.zeroFx8, Fx.sub(sprite._vy, friction));
-                                else
-                                    sprite._vy = Fx.zeroFx8
-
-                                if (Fx.compare(Fx.abs(sprite._vy), minVelocity) < 0) {
-                                    if (Fx.compare(sprite._vy, Fx.zeroFx8) < 0) {
-                                        sprite._vy = Fx.neg(minVelocity);
-                                    }
-                                    else {
-                                        sprite._vy = minVelocity
-                                    }
-                                }
-                                sprite.ay = 0;
-                                break;
-                            case Direction.Left:
-                            case Direction.Right:
-                                sprite.setStateFlag(PlatformerSpriteState.OnWallRight, sprite.isHittingTile(CollisionDirection.Bottom))
-                                sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, sprite.isHittingTile(CollisionDirection.Top))
-
-                                const c2 = Fx.compare(sprite._vx, friction);
-                                if (c2 < 0) // v < f, v += f
-                                    sprite._vx = Fx.min(Fx.zeroFx8, Fx.add(sprite._vx, friction));
-                                else if (c2 > 0) // v > f, v -= f
-                                    sprite._vx = Fx.max(Fx.zeroFx8, Fx.sub(sprite._vx, friction));
-                                else
-                                    sprite._vx = Fx.zeroFx8
-
-                                if (Fx.compare(Fx.abs(sprite._vx), minVelocity) < 0) {
-                                    if (Fx.compare(sprite._vx, Fx.zeroFx8) < 0) {
-                                        sprite._vx = Fx.neg(minVelocity);
-                                    }
-                                    else {
-                                        sprite._vx = minVelocity
-                                    }
-                                }
-                                sprite.ax = 0;
-                                break;
-                        }
-                        if (sprite.hasState(PlatformerSpriteState.OnWallLeft | PlatformerSpriteState.OnWallRight)) {
-                            sprite.setPlatformerFlag(PlatformerFlags.LastWallLeft, sprite.hasState(PlatformerSpriteState.OnWallLeft));
-                            sprite.lastOnWallTime = game.runtime();
-                        }
+                    else {
+                        sprite.setStateFlag(PlatformerSpriteState.WallSliding, false);
                     }
-                }
-                else {
-                    sprite.setStateFlag(PlatformerSpriteState.WallSliding, false);
                 }
 
                 if (onGround) {
