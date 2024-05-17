@@ -22,8 +22,20 @@ platformer.moveSprite(
     true,
     100
 )
+
+controller.menu.onEvent(ControllerButtonEvent.Pressed, () => {
+    platformer.moveSprite(
+        mySprite,
+        !(mySprite.pFlags & platformer.PlatformerFlags.ControlsEnabled),
+        100
+    )
+})
+
 game.onShade(() => {
     top = 5;
+    if (mySprite.pFlags & platformer.PlatformerFlags.ControlsEnabled) {
+        printState("Controls enabled")
+    }
     if (mySprite.hasState(platformer.PlatformerSpriteState.FacingLeft)) {
         printState("FacingLeft");
     }

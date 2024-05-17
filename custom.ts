@@ -207,150 +207,53 @@ namespace platformer {
                 let vx = 0;
                 let vy = 0;
 
-                if (sprite.pFlags & PlatformerFlags.ControlsEnabled) {
-                    if (sprite.flags & sprites.Flag.Destroyed) {
-                        continue;
+
+                if (sprite.flags & sprites.Flag.Destroyed) {
+                    continue;
+                }
+
+                const ctrl = sprite.player;
+
+                if (ctrl && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
+                    if (ctrl.analog) {
+                        svx = (ctrl.right.pressureLevel() - ctrl.left.pressureLevel()) >> 1
+                        svy = (ctrl.down.pressureLevel() - ctrl.up.pressureLevel()) >> 1
+                    } else {
+                        svx = (ctrl.right.isPressed() ? 256 : 0) - (ctrl.left.isPressed() ? 256 : 0)
+                        svy = (ctrl.down.isPressed() ? 256 : 0) - (ctrl.up.isPressed() ? 256 : 0)
+                    }
+                }
+                else {
+                    svx = 0;
+                    svy = 0;
+                }
+
+                if (sprite.pFlags & PlatformerFlags.MovementMomentum) {
+                    if (this.gravityDirection === Direction.Up || this.gravityDirection === Direction.Down) {
+                        vx = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
+                        svy = 0;
+                    }
+                    else {
+                        vy = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
+                        svx = 0;
                     }
 
-                    const ctrl = sprite.player;
+                    const acc = Fx8(sprite.constants.lookupValue(PlatformerConstant.MovementAcceleration));
+                    sprite.setStateFlag(PlatformerSpriteState.Turning, false);
+                    sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
+                    sprite.setStateFlag(PlatformerSpriteState.Accelerating, false);
+                    sprite.setStateFlag(PlatformerSpriteState.MaxRunningSpeed, false);
+                    if (svx || svy) {
+                        if (vx) {
+                            if (vx > 0 && sprite.vx > vx || vx < 0 && sprite.vx < vx) {
+                                const friction = Fx.idiv(
+                                    Fx.imul(
+                                        acc,
+                                        dtMs
+                                    ),
+                                    1000
+                                );
 
-                    if (ctrl) {
-                        if (ctrl.analog) {
-                            svx = (ctrl.right.pressureLevel() - ctrl.left.pressureLevel()) >> 1
-                            svy = (ctrl.down.pressureLevel() - ctrl.up.pressureLevel()) >> 1
-                        } else {
-                            svx = (ctrl.right.isPressed() ? 256 : 0) - (ctrl.left.isPressed() ? 256 : 0)
-                            svy = (ctrl.down.isPressed() ? 256 : 0) - (ctrl.up.isPressed() ? 256 : 0)
-                        }
-                    }
-
-                    if (sprite.pFlags & PlatformerFlags.MovementMomentum) {
-                        if (this.gravityDirection === Direction.Up || this.gravityDirection === Direction.Down) {
-                            vx = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
-                            svy = 0;
-                        }
-                        else {
-                            vy = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
-                            svx = 0;
-                        }
-
-                        const acc = Fx8(sprite.constants.lookupValue(PlatformerConstant.MovementAcceleration));
-                        sprite.setStateFlag(PlatformerSpriteState.Turning, false);
-                        sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
-                        sprite.setStateFlag(PlatformerSpriteState.Accelerating, false);
-                        sprite.setStateFlag(PlatformerSpriteState.MaxRunningSpeed, false);
-                        if (svx || svy) {
-                            if (vx) {
-                                if (vx > 0 && sprite.vx > vx || vx < 0 && sprite.vx < vx) {
-                                    const friction = Fx.idiv(
-                                        Fx.imul(
-                                            acc,
-                                            dtMs
-                                        ),
-                                        1000
-                                    );
-
-                                    const c = Fx.compare(sprite._vx, Fx.zeroFx8);
-                                    if (c < 0) { // v < f, v += f
-                                        sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
-                                        sprite._vx = Fx.min(Fx.zeroFx8, Fx.add(sprite._vx, friction));
-                                    }
-                                    else if (c > 0) { // v > f, v -= f
-                                        sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
-                                        sprite._vx = Fx.max(Fx.zeroFx8, Fx.sub(sprite._vx, friction));
-                                    }
-                                    else {
-                                        sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
-                                        sprite._vx = Fx.zeroFx8
-                                    }
-
-                                    sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
-                                }
-                                else {
-                                    sprite._vx = Fx.add(
-                                        sprite._vx,
-                                        Fx.idiv(
-                                            Fx.imul(
-                                                Fx.mul(svx as any as Fx8, acc),
-                                                dtMs
-                                            ),
-                                            1000
-                                        )
-                                    );
-
-                                    sprite.vx = Math.constrain(sprite.vx, -vx, vx);
-
-                                    if (svx > 0) {
-                                        sprite.setStateFlag(PlatformerSpriteState.MaxRunningSpeed, sprite.vx === vx);
-                                    }
-                                    else {
-                                        sprite.setStateFlag(PlatformerSpriteState.MaxRunningSpeed, sprite.vx === -vx);
-                                    }
-
-                                    if (!sprite.hasState(PlatformerSpriteState.MaxRunningSpeed)) {
-                                        if (Math.sign(sprite.vx) !== Math.sign(svx)) {
-                                            sprite.setStateFlag(PlatformerSpriteState.Turning, true);
-                                        }
-                                        else {
-                                            sprite.setStateFlag(PlatformerSpriteState.Accelerating, true);
-                                        }
-                                    }
-                                }
-                            } else if (vy) {
-                                if (vy > 0 && sprite.vy > vy || vy < 0 && sprite.vy < vy) {
-                                    const friction = Fx.idiv(
-                                        Fx.imul(
-                                            acc,
-                                            dtMs
-                                        ),
-                                        1000
-                                    );
-
-                                    const c = Fx.compare(sprite._vy, Fx.zeroFx8);
-                                    if (c < 0) { // v < f, v += f
-                                        sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
-                                        sprite._vy = Fx.min(Fx.zeroFx8, Fx.add(sprite._vy, friction));
-                                    }
-                                    else if (c > 0) { // v > f, v -= f
-                                        sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
-                                        sprite._vy = Fx.max(Fx.zeroFx8, Fx.sub(sprite._vy, friction));
-                                    }
-                                    else {
-                                        sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
-                                        sprite._vy = Fx.zeroFx8
-                                    }
-
-                                    sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
-                                }
-                                else {
-                                    sprite._vy = Fx.add(
-                                        sprite._vy,
-                                        Fx.idiv(
-                                            Fx.imul(
-                                                Fx.mul(svy as any as Fx8, acc),
-                                                dtMs
-                                            ),
-                                            1000
-                                        )
-                                    );
-
-                                    sprite.vy = Math.constrain(sprite.vy, -vy, vy);
-                                }
-
-                            }
-                            sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, true);
-                        }
-                        else {
-                            const frictionAcc = Fx8(isOnGround(sprite, this.gravityDirection) ? sprite.constants.lookupValue(PlatformerConstant.GroundFriction) : sprite.constants.lookupValue(PlatformerConstant.AirFriction))
-                            const friction = Fx.idiv(
-                                Fx.imul(
-                                    frictionAcc,
-                                    dtMs
-                                ),
-                                1000
-                            );
-
-                            if (vx) {
                                 const c = Fx.compare(sprite._vx, Fx.zeroFx8);
                                 if (c < 0) { // v < f, v += f
                                     sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
@@ -365,7 +268,48 @@ namespace platformer {
                                     sprite._vx = Fx.zeroFx8
                                 }
 
-                            } else if (vy) {
+                                sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
+                            }
+                            else {
+                                sprite._vx = Fx.add(
+                                    sprite._vx,
+                                    Fx.idiv(
+                                        Fx.imul(
+                                            Fx.mul(svx as any as Fx8, acc),
+                                            dtMs
+                                        ),
+                                        1000
+                                    )
+                                );
+
+                                sprite.vx = Math.constrain(sprite.vx, -vx, vx);
+
+                                if (svx > 0) {
+                                    sprite.setStateFlag(PlatformerSpriteState.MaxRunningSpeed, sprite.vx === vx);
+                                }
+                                else {
+                                    sprite.setStateFlag(PlatformerSpriteState.MaxRunningSpeed, sprite.vx === -vx);
+                                }
+
+                                if (!sprite.hasState(PlatformerSpriteState.MaxRunningSpeed)) {
+                                    if (Math.sign(sprite.vx) !== Math.sign(svx)) {
+                                        sprite.setStateFlag(PlatformerSpriteState.Turning, true);
+                                    }
+                                    else {
+                                        sprite.setStateFlag(PlatformerSpriteState.Accelerating, true);
+                                    }
+                                }
+                            }
+                        } else if (vy) {
+                            if (vy > 0 && sprite.vy > vy || vy < 0 && sprite.vy < vy) {
+                                const friction = Fx.idiv(
+                                    Fx.imul(
+                                        acc,
+                                        dtMs
+                                    ),
+                                    1000
+                                );
+
                                 const c = Fx.compare(sprite._vy, Fx.zeroFx8);
                                 if (c < 0) { // v < f, v += f
                                     sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
@@ -379,34 +323,93 @@ namespace platformer {
                                     sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
                                     sprite._vy = Fx.zeroFx8
                                 }
+
+                                sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
                             }
-                            sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
+                            else {
+                                sprite._vy = Fx.add(
+                                    sprite._vy,
+                                    Fx.idiv(
+                                        Fx.imul(
+                                            Fx.mul(svy as any as Fx8, acc),
+                                            dtMs
+                                        ),
+                                        1000
+                                    )
+                                );
+
+                                sprite.vy = Math.constrain(sprite.vy, -vy, vy);
+                            }
+
                         }
+                        sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, true);
                     }
                     else {
-                        if (this.gravityDirection === Direction.Up || this.gravityDirection === Direction.Down) {
-                            vx = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
-                        }
-                        else {
-                            vy = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
-                        }
+                        const frictionAcc = Fx8(isOnGround(sprite, this.gravityDirection) ? sprite.constants.lookupValue(PlatformerConstant.GroundFriction) : sprite.constants.lookupValue(PlatformerConstant.AirFriction))
+                        const friction = Fx.idiv(
+                            Fx.imul(
+                                frictionAcc,
+                                dtMs
+                            ),
+                            1000
+                        );
 
-                        if (sprite.pFlags & PlatformerFlags.InputLastFrame) {
-                            if (vx) sprite._vx = Fx.zeroFx8;
-                            if (vy) sprite._vy = Fx.zeroFx8;
-                        }
-
-                        if (svx || svy) {
-                            if (vx) {
-                                sprite._vx = Fx.imul(svx as any as Fx8, vx)
-                            } else if (vy) {
-                                sprite._vy = Fx.imul(svy as any as Fx8, vy)
+                        if (vx) {
+                            const c = Fx.compare(sprite._vx, Fx.zeroFx8);
+                            if (c < 0) { // v < f, v += f
+                                sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
+                                sprite._vx = Fx.min(Fx.zeroFx8, Fx.add(sprite._vx, friction));
                             }
-                            sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, true);
+                            else if (c > 0) { // v > f, v -= f
+                                sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
+                                sprite._vx = Fx.max(Fx.zeroFx8, Fx.sub(sprite._vx, friction));
+                            }
+                            else {
+                                sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
+                                sprite._vx = Fx.zeroFx8
+                            }
+
+                        } else if (vy) {
+                            const c = Fx.compare(sprite._vy, Fx.zeroFx8);
+                            if (c < 0) { // v < f, v += f
+                                sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
+                                sprite._vy = Fx.min(Fx.zeroFx8, Fx.add(sprite._vy, friction));
+                            }
+                            else if (c > 0) { // v > f, v -= f
+                                sprite.setStateFlag(PlatformerSpriteState.Decelerating, true);
+                                sprite._vy = Fx.max(Fx.zeroFx8, Fx.sub(sprite._vy, friction));
+                            }
+                            else {
+                                sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
+                                sprite._vy = Fx.zeroFx8
+                            }
                         }
-                        else {
-                            sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
+                        sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
+                    }
+                }
+                else {
+                    if (this.gravityDirection === Direction.Up || this.gravityDirection === Direction.Down) {
+                        vx = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
+                    }
+                    else {
+                        vy = sprite.constants.lookupValue(PlatformerConstant.MoveSpeed);
+                    }
+
+                    if (sprite.pFlags & PlatformerFlags.InputLastFrame) {
+                        if (vx) sprite._vx = Fx.zeroFx8;
+                        if (vy) sprite._vy = Fx.zeroFx8;
+                    }
+
+                    if (svx || svy) {
+                        if (vx) {
+                            sprite._vx = Fx.imul(svx as any as Fx8, vx)
+                        } else if (vy) {
+                            sprite._vy = Fx.imul(svy as any as Fx8, vy)
                         }
+                        sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, true);
+                    }
+                    else {
+                        sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
                     }
                 }
 
