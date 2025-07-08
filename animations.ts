@@ -31,6 +31,12 @@ namespace platformer {
             this.renderable = scene.createRenderable(this.sprite.z + 1, (target, camera) => {
                 if (!this.enabled || !this.currentImage) return;
 
+                if (this.sprite.flags & sprites.Flag.Destroyed) {
+                    this.renderable.destroy();
+                    _state().animations.characters.removeElement(this);
+                    return;
+                }
+
                 let drawX = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetX;
                 let drawY = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetY;
                 switch (_state().gravityDirection) {
