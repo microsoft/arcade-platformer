@@ -360,7 +360,7 @@ namespace platformer {
      * @param enabled   True to enable, false to disable
      */
     //% blockId=arcade_mp_character_animation_enabled
-    //% block="$sprite enable Animations $enabled"
+    //% block="$sprite enable character animations $enabled"
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
     //% weight=50
