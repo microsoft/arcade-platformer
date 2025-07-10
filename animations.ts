@@ -239,11 +239,13 @@ namespace platformer {
     //% weight=100
     //% blockGap=8
     //% group="Character Animations"
-    export function loopFrames(sprite: PlatformerSprite, frames: Image[], frameInterval: number, rule: number) {
+    export function loopFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: number) {
         if (!sprite || !frames || !frames.length || !rule) return;
         if (Number.isNaN(frameInterval) || frameInterval < 5) frameInterval = 5;
 
-        const state = getStateForSprite(sprite, true);
+        _assertPlatformerSprite(sprite);
+
+        const state = getStateForSprite(sprite as PlatformerSprite, true);
         state.setLoopFrames(frames, frameInterval, rule);
     }
 
@@ -270,11 +272,13 @@ namespace platformer {
     //% rule.shadow=arcade_mp_character_make_rule
     //% weight=90
     //% group="Character Animations"
-    export function runFrames(sprite: PlatformerSprite, frames: Image[], frameInterval: number, rule: number) {
+    export function runFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: number) {
         if (!sprite || !frames || !frames.length || !rule) return;
         if (Number.isNaN(frameInterval) || frameInterval < 5) frameInterval = 5;
 
-        const state = getStateForSprite(sprite, true);
+        _assertPlatformerSprite(sprite);
+
+        const state = getStateForSprite(sprite as PlatformerSprite, true);
         state.setStartFrames(frames, frameInterval, rule);
     }
 
@@ -294,8 +298,10 @@ namespace platformer {
     //% weight=70
     //% blockGap=8
     //% group="Character Animations"
-    export function setCharacterAnimationsEnabled(sprite: PlatformerSprite, enabled: boolean) {
-        const state = getStateForSprite(sprite, false);
+    export function setCharacterAnimationsEnabled(sprite: Sprite, enabled: boolean) {
+        _assertPlatformerSprite(sprite);
+
+        const state = getStateForSprite(sprite as PlatformerSprite, false);
         if (!state) return;
 
         state.setEnabled(enabled);

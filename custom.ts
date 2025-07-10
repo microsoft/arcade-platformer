@@ -60,6 +60,8 @@ namespace platformer {
         lastOnGroundTime: number;
         lastOnWallTime: number;
         player: controller.Controller;
+        moving: MovingDirection;
+        dashEndTime: number;
 
         constants: PlatformerConstants;
 
@@ -112,6 +114,27 @@ namespace platformer {
                     break;
 
             }
+        }
+
+        setMoving(direction: MovingDirection) {
+            switch (direction) {
+                case MovingDirection.Left:
+                case MovingDirection.Right:
+                    this.moving = direction;
+                    break;
+                default:
+                    this.moving = MovingDirection.None;
+                    break;
+            }
+        }
+
+        jump(pixels: number) {
+            startJump(
+                this,
+                _state().gravity,
+                _state().gravityDirection,
+                pixels
+            );
         }
     }
 
@@ -187,7 +210,6 @@ namespace platformer {
             this.setTemplateFlag(PlatformerFlags.JumpOnAPressed, true)
             this.setTemplateFlag(PlatformerFlags.CoyoteTime, true)
             this.setTemplateFlag(PlatformerFlags.MovementMomentum, true)
-            this.setTemplateFlag(PlatformerFlags.WallJumps, true)
         }
 
         setGravity(strength: number, direction: Direction) {
@@ -214,7 +236,15 @@ namespace platformer {
 
                 const ctrl = sprite.player;
 
-                if (ctrl && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
+                if (sprite.moving === MovingDirection.Left) {
+                    svx = -256;
+                    svy = 0;
+                }
+                else if (sprite.moving === MovingDirection.Right) {
+                    svx = 256;
+                    svy = 0;
+                }
+                else if (ctrl && sprite.pFlags & PlatformerFlags.ControlsEnabled) {
                     if (ctrl.analog) {
                         svx = (ctrl.right.pressureLevel() - ctrl.left.pressureLevel()) >> 1
                         svy = (ctrl.down.pressureLevel() - ctrl.up.pressureLevel()) >> 1
@@ -809,5 +839,15 @@ namespace platformer {
     export function _state() {
         init();
         return stateStack[stateStack.length - 1];
+    }
+
+    export function _assertPlatformerSprite(sprite: Sprite) {
+        if (!isPlatformerSprite(sprite)) {
+            throw "arcade-platformer functions can only be used on Platformer Sprites!";
+        }
+    }
+
+    export function isPlatformerSprite(sprite: Sprite) {
+        return sprite instanceof PlatformerSprite;
     }
 }
