@@ -264,7 +264,7 @@ namespace platformer {
     //% rule.shadow=arcade_mp_character_make_rule
     //% weight=100
     //% blockGap=8
-    //% group="Character Animations"
+    //% group="Animations"
     export function loopFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: number) {
         if (!sprite || !frames || !frames.length || !rule) return;
         if (Number.isNaN(frameInterval) || frameInterval < 5) frameInterval = 5;
@@ -297,7 +297,7 @@ namespace platformer {
     //% frameInterval.shadow=timePicker
     //% rule.shadow=arcade_mp_character_make_rule
     //% weight=90
-    //% group="Character Animations"
+    //% group="Animations"
     export function runFrames(sprite: Sprite, frames: Image[], frameInterval: number, rule: number) {
         if (!sprite || !frames || !frames.length || !rule) return;
         if (Number.isNaN(frameInterval) || frameInterval < 5) frameInterval = 5;
@@ -319,7 +319,7 @@ namespace platformer {
     //% sprite.shadow=variables_get
     //% weight=80
     //% blockGap=8
-    //% group="Character Animations"
+    //% group="Animations"
     export function clearAnimations(sprite: Sprite) {
         _assertPlatformerSprite(sprite);
 
@@ -340,9 +340,9 @@ namespace platformer {
     //% block="$sprite clear all animations for rule $rule"
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
-    //% rukle.shadow=arcade_mp_character_make_rule
+    //% rule.shadow=arcade_mp_character_make_rule
     //% weight=70
-    //% group="Character Animations"
+    //% group="Animations"
     export function clearAnimationsForRule(sprite: Sprite, rule: number) {
         _assertPlatformerSprite(sprite);
 
@@ -360,12 +360,12 @@ namespace platformer {
      * @param enabled   True to enable, false to disable
      */
     //% blockId=arcade_mp_character_animation_enabled
-    //% block="$sprite enable character animations $enabled"
+    //% block="$sprite enable Animations $enabled"
     //% sprite.defl=mySprite
     //% sprite.shadow=variables_get
     //% weight=50
     //% blockGap=8
-    //% group="Character Animations"
+    //% group="Animations"
     export function setCharacterAnimationsEnabled(sprite: Sprite, enabled: boolean) {
         _assertPlatformerSprite(sprite);
 
@@ -390,7 +390,7 @@ namespace platformer {
     //% p5.shadow=platformer_state
     //% weight=40
     //% blockGap=8
-    //% group="Character Animations"
+    //% group="Animations"
     export function rule(p1: number, p2?: number, p3?: number, p4?: number, p5?: number): number {
         let rule = p1;
         if (p2) rule |= p2;

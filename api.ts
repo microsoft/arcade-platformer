@@ -1,5 +1,6 @@
 
 //% color="#f56f42" icon="\uf062"
+//% groups='["Create", "Controls", "Animations", "Events", "Settings"]'
 namespace platformer {
     export enum Direction {
         //% block=up
@@ -114,7 +115,7 @@ namespace platformer {
      * Create a new sprite from an image
      * @param img the image
      */
-    //% group="Sprites"
+    //% group="Create"
     //% blockId=platformercreate block="platformer sprite $img of kind $kind"
     //% expandableArgumentMode=toggle
     //% blockSetVariable=mySprite
@@ -135,7 +136,7 @@ namespace platformer {
         return sprite
     }
 
-    //% group="Sprites"
+    //% group="Create"
     //% blockId=platformerSetConstant
     //% block="$sprite set value for $constant to $value"
     //% sprite.shadow=variables_get
@@ -147,7 +148,7 @@ namespace platformer {
         (sprite as PlatformerSprite).constants.setValue(constant, value);
     }
 
-    //% group="Sprites"
+    //% group="Create"
     //% blockId=platformerHasState
     //% block="$sprite has state $flag"
     //% sprite.shadow=variables_get
@@ -267,12 +268,11 @@ namespace platformer {
     }
 
     //% blockId=platformer_onRuleBecomesTrue
-    //% block="$sprite on state $rule $condition with $sprite"
+    //% block="on state $rule $condition for $sprite"
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
     //% rule.shadow=arcade_mp_character_make_rule
-    //% handlerStatement=true
-    //% draggableParameters=reporter
+    //% draggableParameters="reporter"
     //% group="Events"
     //% weight=100
     //% blockGap=8
@@ -281,10 +281,10 @@ namespace platformer {
     }
 
     //% blockId=platformer_onSpriteRuleBecomesTrue
-    //% block="on state $rule becomes true for $sprite"
+    //% block="$sprite on state $rule $condition with $sprite"
     //% rule.shadow=arcade_mp_character_make_rule
     //% handlerStatement=true
-    //% draggableParameters=reporter
+    //% draggableParameters="reporter"
     //% group="Events"
     //% weight=90
     export function onSpriteRuleBecomesTrue(sprite: Sprite, rule: number, condition: EventHandlerCondition, handler: (sprite: PlatformerSprite) => void) {
