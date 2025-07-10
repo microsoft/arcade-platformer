@@ -116,6 +116,16 @@ game.onShade(() => {
     }
 })
 
+music.setTempo(200)
+
+platformer.onRuleBecomesTrue(platformer.rule(platformer.PlatformerSpriteState.OnGround), platformer.EventHandlerCondition.BecomesTrue, (sprite) => {
+    music.playTone(262, music.beat(BeatFraction.Sixteenth));
+})
+
+platformer.onRuleBecomesTrue(platformer.rule(platformer.PlatformerSpriteState.JumpingUp), platformer.EventHandlerCondition.BecomesTrue, (sprite) => {
+    music.playTone(500, music.beat(BeatFraction.Sixteenth));
+})
+
 
 controller.B.onEvent(ControllerButtonEvent.Pressed, () => {
     setTimeout(() => mySprite.image.fill(3), 100)

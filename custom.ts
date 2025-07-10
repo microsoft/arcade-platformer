@@ -40,12 +40,12 @@ namespace platformer {
         }
 
         maybeRun(sprite: PlatformerSprite) {
-            if (this.condition === EventHandlerCondition.BecomesTrue) {
+            if (this.condition === EventHandlerCondition.BecomesFalse) {
                 if (!_matchesRule(sprite.sFlags, this.rule) && _matchesRule(sprite.previousSFlags, this.rule)) {
                     this.handler(sprite);
                 }
             }
-            else if (this.condition === EventHandlerCondition.BecomesFalse) {
+            else if (this.condition === EventHandlerCondition.BecomesTrue) {
                 if (_matchesRule(sprite.sFlags, this.rule) && !_matchesRule(sprite.previousSFlags, this.rule)) {
                     this.handler(sprite);
                 }
@@ -77,6 +77,7 @@ namespace platformer {
         jumpStartTime: number;
         lastOnGroundTime: number;
         lastOnWallTime: number;
+        lastJumpWasWallJump: boolean;
         player: controller.Controller;
         moving: MovingDirection;
         dashEndTime: number;
@@ -93,6 +94,7 @@ namespace platformer {
             this.pFlags = _state().templateFlags;
             this.constants = new PlatformerConstants(globalConstants);
             this.setStateFlag(PlatformerSpriteState.FacingRight, true);
+            this.lastJumpWasWallJump = false;
         }
 
         setPlatformerFlag(flag: number, enabled: boolean) {
@@ -111,7 +113,9 @@ namespace platformer {
 
         timeToJumpApex() {
             const gravity = Math.abs(_state().gravity);
-            return (1000 * Math.sqrt(2 * this.constants.lookupValue(PlatformerConstant.MaxJumpHeight) * gravity) / gravity) | 0;
+            const jumpHeight = this.lastJumpWasWallJump ? this.constants.lookupValue(PlatformerConstant.WallJumpHeight) : this.constants.lookupValue(PlatformerConstant.MaxJumpHeight);
+
+            return (1000 * Math.sqrt(2 * jumpHeight * gravity) / gravity) | 0;
         }
 
         setGravity(strength: number, direction: Direction) {
@@ -629,7 +633,7 @@ namespace platformer {
                 }
                 else if (sprite.pFlags & PlatformerFlags.CurrentlyJumping) {
                     if (currentTime - sprite.jumpStartTime > sprite.timeToJumpApex()) {
-                        sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false)
+                        sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false);
                         sprite.setStateFlag(PlatformerSpriteState.JumpingUp, false);
                         sprite.setStateFlag(PlatformerSpriteState.AfterJumpApex, true);
                     }
@@ -686,7 +690,6 @@ namespace platformer {
                                 }
                             }
                         }
-                        sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, false);
                     }
 
                     // Wall friction
@@ -696,6 +699,9 @@ namespace platformer {
 
                         sprite.setStateFlag(PlatformerSpriteState.WallSliding, shouldApplyFriction);
                         if (shouldApplyFriction) {
+                            sprite.setStateFlag(PlatformerSpriteState.JumpingUp, false);
+                            sprite.setStateFlag(PlatformerSpriteState.AfterJumpApex, false);
+                            sprite.setStateFlag(PlatformerSpriteState.Falling, false);
                             switch (_state().gravityDirection) {
                                 case Direction.Down:
                                 case Direction.Up:
@@ -855,8 +861,10 @@ namespace platformer {
 
         sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, true);
         sprite.setStateFlag(PlatformerSpriteState.JumpingUp, true);
+        sprite.setStateFlag(PlatformerSpriteState.Falling, false);
         sprite.jumpStartTime = game.runtime();
-        sprite.lastOnGroundTime = - sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis)
+        sprite.lastOnGroundTime = - sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis);
+        sprite.lastJumpWasWallJump = !!kickoffVelocity;
     }
 
     function cancelJump(sprite: PlatformerSprite, gravityDir: Direction) {
