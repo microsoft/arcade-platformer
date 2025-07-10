@@ -78,7 +78,8 @@ namespace platformer {
         Accelerating = 1 << 13,
         Falling = 1 << 14,
         MaxRunningSpeed = 1 << 15,
-        Decelerating = 1 << 16
+        Decelerating = 1 << 16,
+        AboveMaxSpeed = 1 << 17,
     }
 
     /**
