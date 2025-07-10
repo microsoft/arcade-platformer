@@ -269,8 +269,6 @@ namespace platformer {
 
     //% blockId=platformer_onRuleBecomesTrue
     //% block="on state $rule $condition for $sprite"
-    //% sprite.shadow=variables_get
-    //% sprite.defl=mySprite
     //% rule.shadow=arcade_mp_character_make_rule
     //% draggableParameters="reporter"
     //% group="Events"
@@ -281,15 +279,17 @@ namespace platformer {
     }
 
     //% blockId=platformer_onSpriteRuleBecomesTrue
-    //% block="$sprite on state $rule $condition with $sprite"
+    //% block="$target on state $rule $condition with $sprite"
+    //% target.shadow=variables_get
+    //% target.defl=mySprite
     //% rule.shadow=arcade_mp_character_make_rule
     //% handlerStatement=true
     //% draggableParameters="reporter"
     //% group="Events"
     //% weight=90
-    export function onSpriteRuleBecomesTrue(sprite: Sprite, rule: number, condition: EventHandlerCondition, handler: (sprite: PlatformerSprite) => void) {
-        _assertPlatformerSprite(sprite);
-        (sprite as PlatformerSprite).addEventHandler(rule, condition, handler);
+    export function onSpriteRuleBecomesTrue(target: Sprite, rule: number, condition: EventHandlerCondition, handler: (sprite: PlatformerSprite) => void) {
+        _assertPlatformerSprite(target);
+        (target as PlatformerSprite).addEventHandler(rule, condition, handler);
     }
 
     //% group="Settings"
