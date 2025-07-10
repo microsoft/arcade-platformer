@@ -18,7 +18,11 @@ namespace platformer {
         //% block=left
         Left = 1,
         //% block=right
-        Right = 2
+        Right = 2,
+        //% block=up
+        Up = 3,
+        //% block=down
+        Down = 4
     }
 
     export enum PlatformerFeatures {
