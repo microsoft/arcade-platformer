@@ -532,7 +532,14 @@ namespace platformer {
             let onWall = false;
             for (const sprite of this.allSprites) {
                 onGround = isOnGround(sprite, this.gravityDirection);
-                updateWallState(sprite, this.gravityDirection, tilemap);
+
+                if (!onGround) {
+                    updateWallState(sprite, this.gravityDirection, tilemap);
+                }
+                else {
+                    sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, false);
+                    sprite.setStateFlag(PlatformerSpriteState.OnWallRight, false);
+                }
 
                 onWall = sprite.hasState(PlatformerSpriteState.OnWallLeft | PlatformerSpriteState.OnWallRight);
 
@@ -541,7 +548,7 @@ namespace platformer {
                     sprite.setStateFlag(PlatformerSpriteState.AfterJumpApex, false);
                     sprite.setStateFlag(PlatformerSpriteState.Falling, false);
                 }
-                else if (!sprite.hasState(PlatformerSpriteState.AfterJumpApex) && !sprite.hasState(PlatformerSpriteState.JumpingUp)) {
+                else if (!sprite.hasState(PlatformerSpriteState.AfterJumpApex | PlatformerSpriteState.JumpingUp)) {
                     sprite.setStateFlag(PlatformerSpriteState.Falling, true)
                 }
 
