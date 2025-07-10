@@ -225,6 +225,10 @@ namespace platformer {
         return res;
     }
 
+    export function _matchesRule(state: number, rule: number) {
+        return !((state & rule) ^ rule);
+    }
+
     export class _PlatformerAnimationState {
         characters: CharacterState[];
 

@@ -66,24 +66,48 @@ namespace platformer {
     }
 
     export enum PlatformerSpriteState {
+        //% block="facing left"
         FacingLeft = 1 << 0,
+        //% block="facing right"
         FacingRight = 1 << 1,
+        //% block="moving"
         Moving = 1 << 2,
+        //% block="wall sliding"
         WallSliding = 1 << 3,
+        //% block="on wall right"
         OnWallRight = 1 << 4,
+        //% block="on wall left"
         OnWallLeft = 1 << 5,
+        //% block="on ground"
         OnGround = 1 << 6,
+        //% block="jumping up"
         JumpingUp = 1 << 7,
+        //% block="after jump apex"
         AfterJumpApex = 1 << 8,
+        //% block="turning"
         Turning = 1 << 9,
         // 1 << 10 is available
+        //% block="pushing wall left"
         PushingWallLeft = 1 << 11,
+        //% block="pushing wall right"
         PushingWallRight = 1 << 12,
+        //% block="accelerating"
         Accelerating = 1 << 13,
+        //% block="falling"
         Falling = 1 << 14,
+        //% block="at max running speed"
         MaxRunningSpeed = 1 << 15,
+        //% block="decelerating"
         Decelerating = 1 << 16,
+        //% block="above max speed"
         AboveMaxSpeed = 1 << 17,
+    }
+
+    export enum EventHandlerCondition {
+        //% block="becomes true"
+        BecomesTrue,
+        //% block="becomes false"
+        BecomesFalse
     }
 
     /**
@@ -240,6 +264,32 @@ namespace platformer {
         else {
             (sprite as PlatformerSprite).setGravity(0, _state().gravityDirection)
         }
+    }
+
+    //% blockId=platformer_onRuleBecomesTrue
+    //% block="$sprite on state $rule $condition with $sprite"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% rule.shadow=arcade_mp_character_make_rule
+    //% handlerStatement=true
+    //% draggableParameters=reporter
+    //% group="Events"
+    //% weight=100
+    //% blockGap=8
+    export function onRuleBecomesTrue(rule: number, condition: EventHandlerCondition, handler: (sprite: PlatformerSprite) => void) {
+        _state().addEventHandler(rule, condition, handler);
+    }
+
+    //% blockId=platformer_onSpriteRuleBecomesTrue
+    //% block="on state $rule becomes true for $sprite"
+    //% rule.shadow=arcade_mp_character_make_rule
+    //% handlerStatement=true
+    //% draggableParameters=reporter
+    //% group="Events"
+    //% weight=90
+    export function onSpriteRuleBecomesTrue(sprite: Sprite, rule: number, condition: EventHandlerCondition, handler: (sprite: PlatformerSprite) => void) {
+        _assertPlatformerSprite(sprite);
+        (sprite as PlatformerSprite).addEventHandler(rule, condition, handler);
     }
 
     //% group="Settings"

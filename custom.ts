@@ -35,6 +35,24 @@ namespace platformer {
         }
     }
 
+    export class EventHandler {
+        constructor(public rule: number, public condition: EventHandlerCondition, public handler: (sprite: Sprite) => void) {
+        }
+
+        maybeRun(sprite: PlatformerSprite) {
+            if (this.condition === EventHandlerCondition.BecomesTrue) {
+                if (!_matchesRule(sprite.sFlags, this.rule) && _matchesRule(sprite.previousSFlags, this.rule)) {
+                    this.handler(sprite);
+                }
+            }
+            else if (this.condition === EventHandlerCondition.BecomesFalse) {
+                if (_matchesRule(sprite.sFlags, this.rule) && !_matchesRule(sprite.previousSFlags, this.rule)) {
+                    this.handler(sprite);
+                }
+            }
+        }
+    }
+
     function createDefaultConstants() {
         const res = new PlatformerConstants();
         res.setValue(PlatformerConstant.JumpGracePeriodMillis, 100)
@@ -62,8 +80,10 @@ namespace platformer {
         player: controller.Controller;
         moving: MovingDirection;
         dashEndTime: number;
+        previousSFlags: number;
 
         constants: PlatformerConstants;
+        eventHandlers: EventHandler[];
 
         constructor(img: Image) {
             super(img);
@@ -136,6 +156,20 @@ namespace platformer {
                 pixels
             );
         }
+
+        runEventHandlers() {
+            if (!this.eventHandlers) return;
+            for (const handler of this.eventHandlers) {
+                handler.maybeRun(this);
+            }
+        }
+
+        addEventHandler(rule: number, condition: EventHandlerCondition, handler: (sprite: Sprite) => void) {
+            if (!this.eventHandlers) {
+                this.eventHandlers = [];
+            }
+            this.eventHandlers.push(new EventHandler(rule, condition, handler));
+        }
     }
 
     let stateStack: PlatformerState[];
@@ -153,6 +187,7 @@ namespace platformer {
         aButtonIsPressed: boolean[];
 
         animations: _PlatformerAnimationState;
+        handlers: EventHandler[];
 
         constructor() {
             this.gravity = 500;
@@ -160,6 +195,7 @@ namespace platformer {
 
             this.allSprites = [];
             this.animations = new _PlatformerAnimationState();
+            this.handlers = [];
 
             game.currentScene().eventContext.registerFrameHandler(scene.CONTROLLER_SPRITES_PRIORITY, () => {
                 this.moveSprites();
@@ -225,6 +261,7 @@ namespace platformer {
 
             const dtMs = control.eventContext().deltaTimeMillis;
             for (const sprite of this.allSprites) {
+                sprite.previousSFlags = sprite.sFlags;
                 let vx = 0;
                 let vy = 0;
 
@@ -522,6 +559,16 @@ namespace platformer {
             }
 
             this.handleJumping();
+
+            for (const sprite of this.allSprites) {
+                if (sprite.flags & sprites.Flag.Destroyed) {
+                    continue;
+                }
+
+                for (const handler of this.handlers) {
+                    handler.maybeRun(sprite);
+                }
+            }
         }
 
         handleJumping() {
@@ -751,6 +798,10 @@ namespace platformer {
 
         setGlobalConstant(constant: PlatformerConstant, value: number) {
             globalConstants.setValue(constant, value);
+        }
+
+        addEventHandler(rule: number, condition: EventHandlerCondition, handler: (sprite: PlatformerSprite) => void) {
+            this.handlers.push(new EventHandler(rule, condition, handler));
         }
     }
 
