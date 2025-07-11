@@ -121,13 +121,15 @@ game.onShade(() => {
 music.setTempo(200)
 
 platformer.onRuleBecomesTrue(platformer.rule(platformer.PlatformerSpriteState.OnGround), platformer.EventHandlerCondition.BecomesTrue, (sprite) => {
-    music.playTone(262, music.beat(BeatFraction.Sixteenth));
+    // music.playTone(262, music.beat(BeatFraction.Sixteenth));
 })
 
 platformer.onRuleBecomesTrue(platformer.rule(platformer.PlatformerSpriteState.JumpingUp), platformer.EventHandlerCondition.BecomesTrue, (sprite) => {
-    music.playTone(500, music.beat(BeatFraction.Sixteenth));
+    // music.playTone(500, music.beat(BeatFraction.Sixteenth));
 })
 
+
+platformer.setConstant(mySprite, platformer.PlatformerConstant.InAirJumps, 2);
 
 controller.B.onEvent(ControllerButtonEvent.Pressed, () => {
     platformer.setGravityEnabled(mySprite, false);

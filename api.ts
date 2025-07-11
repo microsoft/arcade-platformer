@@ -64,6 +64,10 @@ namespace platformer {
         WallFriction,
         //% block="wall min velocity"
         WallMinVelocity,
+        //% block="in air jumps"
+        InAirJumps,
+        //% block="in air jump height"
+        InAirJumpHeight,
     }
 
     export enum PlatformerSpriteState {
