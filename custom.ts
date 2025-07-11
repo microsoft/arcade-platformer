@@ -11,6 +11,8 @@ namespace platformer {
         MovementMomentum = 1 << 8,
         WallJumps = 1 << 9,
         LastWallLeft = 1 << 10,
+        Friction = 1 << 11,
+        Gravity = 1 << 12
     }
 
     class PlatformerConstants {
@@ -57,13 +59,13 @@ namespace platformer {
         const res = new PlatformerConstants();
         res.setValue(PlatformerConstant.JumpGracePeriodMillis, 100)
         res.setValue(PlatformerConstant.CoyoteTimeMillis, 100)
-        res.setValue(PlatformerConstant.MoveSpeed, 60)
+        res.setValue(PlatformerConstant.MoveSpeed, 100)
         res.setValue(PlatformerConstant.MaxJumpHeight, 40)
         res.setValue(PlatformerConstant.MovementAcceleration, 700)
         res.setValue(PlatformerConstant.GroundFriction, 700)
         res.setValue(PlatformerConstant.AirFriction, 200)
-        res.setValue(PlatformerConstant.WallJumpHeight, 30)
-        res.setValue(PlatformerConstant.WallJumpKickoffVelocity, 100)
+        res.setValue(PlatformerConstant.WallJumpHeight, 16)
+        res.setValue(PlatformerConstant.WallJumpKickoffVelocity, 200)
         res.setValue(PlatformerConstant.WallFriction, 500)
         res.setValue(PlatformerConstant.WallMinVelocity, 50)
         return res;
@@ -117,6 +119,12 @@ namespace platformer {
         }
 
         setGravity(strength: number, direction: Direction) {
+            if (!(this.pFlags & PlatformerFlags.Gravity)) {
+                this.ay = 0;
+                this.ax = 0;
+                return;
+            }
+
             switch (direction) {
                 case Direction.Down:
                     this.ay = strength;
@@ -197,7 +205,7 @@ namespace platformer {
         handlers: EventHandler[];
 
         constructor() {
-            this.gravity = 500;
+            this.gravity = 1000;
             this.gravityDirection = Direction.Down;
 
             this.allSprites = [];
@@ -252,6 +260,8 @@ namespace platformer {
             this.setTemplateFlag(PlatformerFlags.JumpOnAPressed, true)
             this.setTemplateFlag(PlatformerFlags.CoyoteTime, true)
             this.setTemplateFlag(PlatformerFlags.MovementMomentum, true)
+            this.setTemplateFlag(PlatformerFlags.Gravity, true)
+            this.setTemplateFlag(PlatformerFlags.Friction, true)
         }
 
         setGravity(strength: number, direction: Direction) {
@@ -457,7 +467,7 @@ namespace platformer {
                         }
                         sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, true);
                     }
-                    else {
+                    else if (sprite.pFlags & PlatformerFlags.Friction) {
                         const frictionAcc = Fx8(isOnGround(sprite, this.gravityDirection) ? sprite.constants.lookupValue(PlatformerConstant.GroundFriction) : sprite.constants.lookupValue(PlatformerConstant.AirFriction))
                         const friction = Fx.idiv(
                             Fx.imul(
@@ -499,6 +509,9 @@ namespace platformer {
                             }
                         }
                         sprite.setPlatformerFlag(PlatformerFlags.InputLastFrame, false);
+                    }
+                    else {
+                        sprite.setStateFlag(PlatformerSpriteState.Decelerating, false);
                     }
                 }
                 else {
@@ -585,7 +598,7 @@ namespace platformer {
             for (const sprite of this.allSprites) {
                 onGround = isOnGround(sprite, this.gravityDirection);
 
-                if (!onGround) {
+                if (!onGround && sprite.pFlags & PlatformerFlags.Gravity) {
                     updateWallState(sprite, this.gravityDirection, tilemap);
                 }
                 else {
@@ -931,10 +944,14 @@ namespace platformer {
             return;
         }
 
+        const left = (sprite.left - 1) >> tilemap.scale;
+        const right = sprite.right >> tilemap.scale;
+        const top = (sprite.top - 1) >> tilemap.scale;
+        const bottom = sprite.bottom >> tilemap.scale;
+
         if (sprite.hasState(PlatformerSpriteState.OnWallLeft)) {
             if (gravityDir === Direction.Down || gravityDir === Direction.Up) {
-                let left = (sprite.left - 1) >> tilemap.scale;
-                for (let i = sprite.top >> tilemap.scale; i <= (sprite.bottom - 1) >> tilemap.scale; i++) {
+                for (let i = top; i <= bottom; i++) {
                     if (tilemap.isWall(left, i) || tilemap.isOutsideMap(left, i)) {
                         sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, true);
                         return;
@@ -942,8 +959,7 @@ namespace platformer {
                 }
             }
             else {
-                let top = (sprite.top - 1) >> tilemap.scale;
-                for (let i = sprite.left >> tilemap.scale; i <= (sprite.right - 1) >> tilemap.scale; i++) {
+                for (let i = left; i <= right; i++) {
                     if (tilemap.isWall(i, top) || tilemap.isOutsideMap(i, top)) {
                         sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, true);
                         return;
@@ -955,8 +971,7 @@ namespace platformer {
 
         if (sprite.hasState(PlatformerSpriteState.OnWallRight)) {
             if (gravityDir === Direction.Down || gravityDir === Direction.Up) {
-                let right = (sprite.right) >> tilemap.scale;
-                for (let i = sprite.top >> tilemap.scale; i <= (sprite.bottom - 1) >> tilemap.scale; i++) {
+                for (let i = top; i <= bottom; i++) {
                     if (tilemap.isWall(right, i) || tilemap.isOutsideMap(right, i)) {
                         sprite.setStateFlag(PlatformerSpriteState.OnWallRight, true);
                         return;
@@ -964,8 +979,7 @@ namespace platformer {
                 }
             }
             else {
-                let bottom = (sprite.bottom) >> tilemap.scale;
-                for (let i = sprite.left >> tilemap.scale; i <= (sprite.right - 1) >> tilemap.scale; i++) {
+                for (let i = left; i <= right; i++) {
                     if (tilemap.isWall(i, bottom) || tilemap.isOutsideMap(i, bottom)) {
                         sprite.setStateFlag(PlatformerSpriteState.OnWallRight, true);
                         return;

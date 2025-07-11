@@ -209,6 +209,7 @@ namespace platformer {
     //% enabled.shadow=toggleOnOff
     //% enabled.defl=true
     //% inlineInputMode=inline
+    //% weight=100
     export function moveSprite(sprite: Sprite, enabled: boolean, moveSpeed?: number, player?: controller.Controller) {
         _assertPlatformerSprite(sprite);
 
@@ -227,27 +228,29 @@ namespace platformer {
     }
 
     //% group="Controls"
-    //% blockId=platformer_setMoving
-    //% block="$sprite set moving $direction"
-    //% sprite.shadow=variables_get
-    //% sprite.defl=mySprite
-    //% direction.shadow=platformer_movingDirection
-    export function setMoving(sprite: Sprite, direction: number) {
-        _assertPlatformerSprite(sprite);
-
-        (sprite as PlatformerSprite).setMoving(direction);
-    }
-
-    //% group="Controls"
     //% blockId=platformer_jump
     //% block="$sprite jump||$height pixels"
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
     //% height.defl=32
+    //% weight=90
     export function jump(sprite: Sprite, height?: number) {
         _assertPlatformerSprite(sprite);
 
         (sprite as PlatformerSprite).jump(height);
+    }
+
+    //% group="Controls"
+    //% blockId=platformer_setMoving
+    //% block="$sprite force movement in $direction"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% direction.shadow=platformer_movingDirection
+    //% weight=80
+    export function setMoving(sprite: Sprite, direction: number) {
+        _assertPlatformerSprite(sprite);
+
+        (sprite as PlatformerSprite).setMoving(direction);
     }
 
     //% group="Controls"
@@ -256,15 +259,37 @@ namespace platformer {
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
     //% enabled.defl=false
+    //% weight=70
+    //% blockGap=8
     export function setGravityEnabled(sprite: Sprite, enabled: boolean) {
         _assertPlatformerSprite(sprite);
 
-        if (enabled) {
-            (sprite as PlatformerSprite).setGravity(_state().gravity, _state().gravityDirection)
+        (sprite as PlatformerSprite).setPlatformerFlag(PlatformerFlags.Gravity, enabled);
+
+        if (!enabled) {
+            if (_state().gravityDirection == Direction.Down || _state().gravityDirection == Direction.Up) {
+                sprite.vy = 0;
+            }
+            else {
+                sprite.vx = 0;
+            }
         }
         else {
-            (sprite as PlatformerSprite).setGravity(0, _state().gravityDirection)
+            (sprite as PlatformerSprite).setGravity((sprite as PlatformerSprite).constants.lookupValue(PlatformerConstant.GroundFriction), _state().gravityDirection);
         }
+    }
+
+    //% group="Controls"
+    //% blockId=platformer_setFrictionEnabled
+    //% block="$sprite set friction enabled $enabled"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% enabled.defl=false
+    //% weight=60
+    export function setFrictionEnabled(sprite: Sprite, enabled: boolean) {
+        _assertPlatformerSprite(sprite);
+
+        (sprite as PlatformerSprite).setPlatformerFlag(PlatformerFlags.Friction, enabled);
     }
 
     //% blockId=platformer_onRuleBecomesTrue

@@ -25,7 +25,7 @@ platformer.moveSprite(
     100
 )
 
-platformer.setConstant(mySprite, platformer.PlatformerConstant.WallJumpHeight, 12)
+platformer.setConstant(mySprite, platformer.PlatformerConstant.WallJumpHeight, 16)
 platformer.setConstant(mySprite, platformer.PlatformerConstant.WallJumpKickoffVelocity, 200)
 
 
@@ -130,5 +130,23 @@ platformer.onRuleBecomesTrue(platformer.rule(platformer.PlatformerSpriteState.Ju
 
 
 controller.B.onEvent(ControllerButtonEvent.Pressed, () => {
-    setTimeout(() => mySprite.image.fill(3), 100)
+    platformer.setGravityEnabled(mySprite, false);
+    platformer.moveSprite(mySprite, false);
+    platformer.setFrictionEnabled(mySprite, false);
+    if (controller.up.isPressed()) {
+        mySprite.vx = 0;
+        mySprite.vy = -300;
+    }
+    else if (platformer.hasState(mySprite, platformer.PlatformerSpriteState.FacingLeft)) {
+        mySprite.vx = -300
+    }
+    else {
+        mySprite.vx = 300
+    }
+
+    setTimeout(() => {
+        platformer.setGravityEnabled(mySprite, true);
+        platformer.moveSprite(mySprite, true, 100);
+        platformer.setFrictionEnabled(mySprite, true);
+    }, 100);
 })
