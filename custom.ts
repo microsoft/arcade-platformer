@@ -77,7 +77,7 @@ namespace platformer {
         jumpStartTime: number;
         lastOnGroundTime: number;
         lastOnWallTime: number;
-        lastJumpWasWallJump: boolean;
+        lastJumpHeight: number;
         player: controller.Controller;
         moving: MovingDirection;
         dashEndTime: number;
@@ -94,7 +94,7 @@ namespace platformer {
             this.pFlags = _state().templateFlags;
             this.constants = new PlatformerConstants(globalConstants);
             this.setStateFlag(PlatformerSpriteState.FacingRight, true);
-            this.lastJumpWasWallJump = false;
+            this.lastJumpHeight = 0;
         }
 
         setPlatformerFlag(flag: number, enabled: boolean) {
@@ -113,9 +113,7 @@ namespace platformer {
 
         timeToJumpApex() {
             const gravity = Math.abs(_state().gravity);
-            const jumpHeight = this.lastJumpWasWallJump ? this.constants.lookupValue(PlatformerConstant.WallJumpHeight) : this.constants.lookupValue(PlatformerConstant.MaxJumpHeight);
-
-            return (1000 * Math.sqrt(2 * jumpHeight * gravity) / gravity) | 0;
+            return (1000 * Math.sqrt(2 * this.lastJumpHeight * gravity) / gravity) | 0;
         }
 
         setGravity(strength: number, direction: Direction) {
@@ -162,8 +160,13 @@ namespace platformer {
         }
 
         runEventHandlers() {
-            if (!this.eventHandlers) return;
-            for (const handler of this.eventHandlers) {
+            if (this.eventHandlers) {
+                for (const handler of this.eventHandlers) {
+                    handler.maybeRun(this);
+                }
+            }
+
+            for (const handler of _state().handlers) {
                 handler.maybeRun(this);
             }
         }
@@ -265,7 +268,6 @@ namespace platformer {
 
             const dtMs = control.eventContext().deltaTimeMillis;
             for (const sprite of this.allSprites) {
-                sprite.previousSFlags = sprite.sFlags;
                 let vx = 0;
                 let vy = 0;
 
@@ -569,9 +571,8 @@ namespace platformer {
                     continue;
                 }
 
-                for (const handler of this.handlers) {
-                    handler.maybeRun(sprite);
-                }
+                sprite.runEventHandlers();
+                sprite.previousSFlags = sprite.sFlags;
             }
         }
 
@@ -864,7 +865,8 @@ namespace platformer {
         sprite.setStateFlag(PlatformerSpriteState.Falling, false);
         sprite.jumpStartTime = game.runtime();
         sprite.lastOnGroundTime = - sprite.constants.lookupValue(PlatformerConstant.CoyoteTimeMillis);
-        sprite.lastJumpWasWallJump = !!kickoffVelocity;
+        sprite.lastJumpHeight = jumpHeight;
+        sprite.clearObstacles();
     }
 
     function cancelJump(sprite: PlatformerSprite, gravityDir: Direction) {
