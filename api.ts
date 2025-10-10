@@ -118,6 +118,7 @@ namespace platformer {
     /**
      * Create a new sprite from an image
      * @param img the image
+     * @param kind the SpriteKind
      */
     //% group="Create"
     //% blockId=platformercreate block="platformer sprite $img of kind $kind"
@@ -140,6 +141,14 @@ namespace platformer {
         return sprite
     }
 
+    /**
+     * Sets a value for a sprite. For example, the movement speed, jump height,
+     * friction, etc.
+     *
+     * @param sprite    The sprite to set the constant for
+     * @param constant  The constant to set
+     * @param value     The value to set the constant to
+     */
     //% group="Create"
     //% blockId=platformerSetConstant
     //% block="$sprite set value for $constant to $value"
@@ -152,6 +161,14 @@ namespace platformer {
         (sprite as PlatformerSprite).constants.setValue(constant, value);
     }
 
+    /**
+     * Checks if a sprite has the specified flag or set of flags. For combined flags, will only
+     * return true if all flags are set.
+     *
+     * @param sprite    The sprite to check
+     * @param flag      The flag or set of flags to check for
+     * @returns         True if the sprite has the specified flag(s), false otherwise
+     */
     //% group="Create"
     //% blockId=platformerHasState
     //% block="$sprite has state $flag"
@@ -164,6 +181,9 @@ namespace platformer {
         return (sprite as PlatformerSprite).hasState(flag);
     }
 
+    /**
+     * A gravity direction. The default is down.
+     */
     //% blockId=platformer_direction
     //% block="$direction"
     //% shim=TD_ID
@@ -172,6 +192,9 @@ namespace platformer {
         return direction;
     }
 
+    /**
+     * A direction that a sprite can move in.
+     */
     //% group="Controls"
     //% blockId=platformer_movingDirection
     //% block="$direction"
@@ -180,6 +203,9 @@ namespace platformer {
         return direction;
     }
 
+    /**
+     * A feqature of the platformer engine that can be enabled or disabled.
+     */
     //% blockId=platformer_feature
     //% block="$feature"
     //% shim=TD_ID
@@ -188,6 +214,9 @@ namespace platformer {
         return feature;
     }
 
+    /**
+     * A numerical value that can be used to customize the platformer engine.
+     */
     //% blockId=platformer_constant
     //% block="$constant"
     //% shim=TD_ID
@@ -196,6 +225,9 @@ namespace platformer {
         return constant;
     }
 
+    /**
+     * A state flag for a sprite.
+     */
     //% blockId=platformer_state
     //% block="$state"
     //% shim=TD_ID
@@ -204,6 +236,16 @@ namespace platformer {
         return state;
     }
 
+    /**
+     * Sets the controls for a sprite, which allows the sprite to move and jump
+     * using the controller buttons. By default, the A button is used to jump but this
+     * can be customized by using the `setFeatureEnabled` function.
+     *
+     * @param sprite    The sprite to set the controls for
+     * @param enabled   Whether the controls are enabled
+     * @param moveSpeed The speed at which the sprite moves
+     * @param player    The player controller to use
+     */
     //% group="Controls"
     //% blockId=platformermoveSprite
     //% block="set controls for $sprite $enabled|| with speed $moveSpeed and controller $player"
@@ -231,6 +273,15 @@ namespace platformer {
         }
     }
 
+    /**
+     * Makes the sprite jump a certain height. This does not check if the
+     * sprite is on the ground, a wall, or in the air. If no height is specified,
+     * jumps using the sprite's `MaxJumpHeight` constant.
+     *
+     * @param sprite The sprite to jump
+     * @param height The height to jump, in pixels. If not specified, uses the
+     *               sprite's `MaxJumpHeight` constant.
+     */
     //% group="Controls"
     //% blockId=platformer_jump
     //% block="$sprite jump||$height pixels"
@@ -244,6 +295,13 @@ namespace platformer {
         (sprite as PlatformerSprite).jump(height);
     }
 
+    /**
+     * Locks the sprite's movement in a specific direction. It essentially forces
+     * a button to be held down for the sprite.
+     *
+     * @param sprite    The sprite to lock the movement for
+     * @param direction The direction to lock the movement in
+     */
     //% group="Controls"
     //% blockId=platformer_setMoving
     //% block="$sprite force movement in $direction"
@@ -257,6 +315,12 @@ namespace platformer {
         (sprite as PlatformerSprite).setMoving(direction);
     }
 
+    /**
+     * Enables or disables the gravity for a sprite
+     *
+     * @param sprite    The sprite to enable or disable gravity for
+     * @param enabled   Whether gravity should be enabled or disabled
+     */
     //% group="Controls"
     //% blockId=platformer_setGravityEnabled
     //% block="$sprite set gravity enabled $enabled"
@@ -283,6 +347,13 @@ namespace platformer {
         }
     }
 
+    /**
+     * Enables or disables friction for a sprite. This is only really useful for implementing
+     * something like a dash where you want the physics to momentairily ignore friction.
+     *
+     * @param sprite    The sprite to enable or disable friction for
+     * @param enabled   Whether friction should be enabled or disabled
+     */
     //% group="Controls"
     //% blockId=platformer_setFrictionEnabled
     //% block="$sprite set friction enabled $enabled"

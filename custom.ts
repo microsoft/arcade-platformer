@@ -166,7 +166,7 @@ namespace platformer {
                 this,
                 _state().gravity,
                 _state().gravityDirection,
-                pixels
+                pixels || this.constants.lookupValue(PlatformerConstant.MaxJumpHeight)
             );
         }
 
