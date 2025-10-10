@@ -1,5 +1,6 @@
 
 //% color="#f56f42" icon="\uf062"
+//% groups='["Create", "Controls", "Animations", "Events", "Settings"]'
 namespace platformer {
     export enum Direction {
         //% block=up
@@ -10,6 +11,19 @@ namespace platformer {
         Left,
         //% block=right
         Right
+    }
+
+    export enum MovingDirection {
+        //% block=none
+        None = 0,
+        //% block=left
+        Left = 1,
+        //% block=right
+        Right = 2,
+        //% block=up
+        Up = 3,
+        //% block=down
+        Down = 4
     }
 
     export enum PlatformerFeatures {
@@ -50,31 +64,61 @@ namespace platformer {
         WallFriction,
         //% block="wall min velocity"
         WallMinVelocity,
+        //% block="in air jumps"
+        InAirJumps,
+        //% block="in air jump height"
+        InAirJumpHeight,
     }
 
     export enum PlatformerSpriteState {
+        //% block="facing left"
         FacingLeft = 1 << 0,
+        //% block="facing right"
         FacingRight = 1 << 1,
+        //% block="moving"
         Moving = 1 << 2,
+        //% block="wall sliding"
         WallSliding = 1 << 3,
+        //% block="on wall right"
         OnWallRight = 1 << 4,
+        //% block="on wall left"
         OnWallLeft = 1 << 5,
+        //% block="on ground"
         OnGround = 1 << 6,
+        //% block="jumping up"
         JumpingUp = 1 << 7,
+        //% block="after jump apex"
         AfterJumpApex = 1 << 8,
+        //% block="turning"
         Turning = 1 << 9,
         // 1 << 10 is available
+        //% block="pushing wall left"
         PushingWallLeft = 1 << 11,
+        //% block="pushing wall right"
         PushingWallRight = 1 << 12,
+        //% block="accelerating"
         Accelerating = 1 << 13,
+        //% block="falling"
         Falling = 1 << 14,
+        //% block="at max running speed"
         MaxRunningSpeed = 1 << 15,
-        Decelerating = 1 << 16
+        //% block="decelerating"
+        Decelerating = 1 << 16,
+        //% block="above max speed"
+        AboveMaxSpeed = 1 << 17,
+    }
+
+    export enum EventHandlerCondition {
+        //% block="becomes true"
+        BecomesTrue,
+        //% block="becomes false"
+        BecomesFalse
     }
 
     /**
      * Create a new sprite from an image
      * @param img the image
+     * @param kind the SpriteKind
      */
     //% group="Create"
     //% blockId=platformercreate block="platformer sprite $img of kind $kind"
@@ -97,15 +141,49 @@ namespace platformer {
         return sprite
     }
 
+    /**
+     * Sets a value for a sprite. For example, the movement speed, jump height,
+     * friction, etc.
+     *
+     * @param sprite    The sprite to set the constant for
+     * @param constant  The constant to set
+     * @param value     The value to set the constant to
+     */
+    //% group="Create"
+    //% blockId=platformerSetConstant
+    //% block="$sprite set value for $constant to $value"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% constant.shadow=platformer_constant
+    export function setConstant(sprite: Sprite, constant: number, value: number) {
+        _assertPlatformerSprite(sprite);
 
-    //% blockId=platformerSetGravity
-    //% block="set gravity $strength||$direction"
-    //% strength.defl=500
-    //% direction.shadow=platformer_direction
-    export function setGravity(strength: number, direction?: number) {
-        _state().setGravity(strength, direction == undefined ? Direction.Down : direction);
+        (sprite as PlatformerSprite).constants.setValue(constant, value);
     }
 
+    /**
+     * Checks if a sprite has the specified flag or set of flags. For combined flags, will only
+     * return true if all flags are set.
+     *
+     * @param sprite    The sprite to check
+     * @param flag      The flag or set of flags to check for
+     * @returns         True if the sprite has the specified flag(s), false otherwise
+     */
+    //% group="Create"
+    //% blockId=platformerHasState
+    //% block="$sprite has state $flag"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% flag.shadow=platformer_state
+    export function hasState(sprite: Sprite, flag: number) {
+        _assertPlatformerSprite(sprite);
+
+        return (sprite as PlatformerSprite).hasState(flag);
+    }
+
+    /**
+     * A gravity direction. The default is down.
+     */
     //% blockId=platformer_direction
     //% block="$direction"
     //% shim=TD_ID
@@ -114,6 +192,20 @@ namespace platformer {
         return direction;
     }
 
+    /**
+     * A direction that a sprite can move in.
+     */
+    //% group="Controls"
+    //% blockId=platformer_movingDirection
+    //% block="$direction"
+    //% shim=TD_ID
+    export function _movingDirection(direction: MovingDirection): number {
+        return direction;
+    }
+
+    /**
+     * A feqature of the platformer engine that can be enabled or disabled.
+     */
     //% blockId=platformer_feature
     //% block="$feature"
     //% shim=TD_ID
@@ -122,6 +214,9 @@ namespace platformer {
         return feature;
     }
 
+    /**
+     * A numerical value that can be used to customize the platformer engine.
+     */
     //% blockId=platformer_constant
     //% block="$constant"
     //% shim=TD_ID
@@ -130,6 +225,9 @@ namespace platformer {
         return constant;
     }
 
+    /**
+     * A state flag for a sprite.
+     */
     //% blockId=platformer_state
     //% block="$state"
     //% shim=TD_ID
@@ -138,6 +236,17 @@ namespace platformer {
         return state;
     }
 
+    /**
+     * Sets the controls for a sprite, which allows the sprite to move and jump
+     * using the controller buttons. By default, the A button is used to jump but this
+     * can be customized by using the `setFeatureEnabled` function.
+     *
+     * @param sprite    The sprite to set the controls for
+     * @param enabled   Whether the controls are enabled
+     * @param moveSpeed The speed at which the sprite moves
+     * @param player    The player controller to use
+     */
+    //% group="Controls"
     //% blockId=platformermoveSprite
     //% block="set controls for $sprite $enabled|| with speed $moveSpeed and controller $player"
     //% sprite.shadow=variables_get
@@ -146,19 +255,153 @@ namespace platformer {
     //% enabled.shadow=toggleOnOff
     //% enabled.defl=true
     //% inlineInputMode=inline
-    export function moveSprite(sprite: PlatformerSprite, enabled: boolean, moveSpeed?: number, player?: controller.Controller) {
-        sprite.player = player || sprite.player || controller.player1
+    //% weight=100
+    export function moveSprite(sprite: Sprite, enabled: boolean, moveSpeed?: number, player?: controller.Controller) {
+        _assertPlatformerSprite(sprite);
+
+        const pSprite = sprite as PlatformerSprite;
+
+        pSprite.player = player || pSprite.player || controller.player1
         if (enabled) {
-            sprite.pFlags |= PlatformerFlags.ControlsEnabled;
-            sprite.constants.setValue(PlatformerConstant.MoveSpeed, moveSpeed);
+            pSprite.pFlags |= PlatformerFlags.ControlsEnabled;
+            pSprite.constants.setValue(PlatformerConstant.MoveSpeed, moveSpeed);
         }
         else {
-            sprite.pFlags &= ~(
+            pSprite.pFlags &= ~(
                 PlatformerFlags.ControlsEnabled
             );
         }
     }
 
+    /**
+     * Makes the sprite jump a certain height. This does not check if the
+     * sprite is on the ground, a wall, or in the air. If no height is specified,
+     * jumps using the sprite's `MaxJumpHeight` constant.
+     *
+     * @param sprite The sprite to jump
+     * @param height The height to jump, in pixels. If not specified, uses the
+     *               sprite's `MaxJumpHeight` constant.
+     */
+    //% group="Controls"
+    //% blockId=platformer_jump
+    //% block="$sprite jump||$height pixels"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% height.defl=32
+    //% weight=90
+    export function jump(sprite: Sprite, height?: number) {
+        _assertPlatformerSprite(sprite);
+
+        (sprite as PlatformerSprite).jump(height);
+    }
+
+    /**
+     * Locks the sprite's movement in a specific direction. It essentially forces
+     * a button to be held down for the sprite.
+     *
+     * @param sprite    The sprite to lock the movement for
+     * @param direction The direction to lock the movement in
+     */
+    //% group="Controls"
+    //% blockId=platformer_setMoving
+    //% block="$sprite force movement in $direction"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% direction.shadow=platformer_movingDirection
+    //% weight=80
+    export function setMoving(sprite: Sprite, direction: number) {
+        _assertPlatformerSprite(sprite);
+
+        (sprite as PlatformerSprite).setMoving(direction);
+    }
+
+    /**
+     * Enables or disables the gravity for a sprite
+     *
+     * @param sprite    The sprite to enable or disable gravity for
+     * @param enabled   Whether gravity should be enabled or disabled
+     */
+    //% group="Controls"
+    //% blockId=platformer_setGravityEnabled
+    //% block="$sprite set gravity enabled $enabled"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% enabled.defl=false
+    //% weight=70
+    //% blockGap=8
+    export function setGravityEnabled(sprite: Sprite, enabled: boolean) {
+        _assertPlatformerSprite(sprite);
+
+        (sprite as PlatformerSprite).setPlatformerFlag(PlatformerFlags.Gravity, enabled);
+
+        if (!enabled) {
+            if (_state().gravityDirection == Direction.Down || _state().gravityDirection == Direction.Up) {
+                sprite.vy = 0;
+            }
+            else {
+                sprite.vx = 0;
+            }
+        }
+        else {
+            (sprite as PlatformerSprite).setGravity((sprite as PlatformerSprite).constants.lookupValue(PlatformerConstant.GroundFriction), _state().gravityDirection);
+        }
+    }
+
+    /**
+     * Enables or disables friction for a sprite. This is only really useful for implementing
+     * something like a dash where you want the physics to momentairily ignore friction.
+     *
+     * @param sprite    The sprite to enable or disable friction for
+     * @param enabled   Whether friction should be enabled or disabled
+     */
+    //% group="Controls"
+    //% blockId=platformer_setFrictionEnabled
+    //% block="$sprite set friction enabled $enabled"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% enabled.defl=false
+    //% weight=60
+    export function setFrictionEnabled(sprite: Sprite, enabled: boolean) {
+        _assertPlatformerSprite(sprite);
+
+        (sprite as PlatformerSprite).setPlatformerFlag(PlatformerFlags.Friction, enabled);
+    }
+
+    //% blockId=platformer_onRuleBecomesTrue
+    //% block="on state $rule $condition for $sprite"
+    //% rule.shadow=arcade_mp_character_make_rule
+    //% draggableParameters="reporter"
+    //% group="Events"
+    //% weight=100
+    //% blockGap=8
+    export function onRuleBecomesTrue(rule: number, condition: EventHandlerCondition, handler: (sprite: PlatformerSprite) => void) {
+        _state().addEventHandler(rule, condition, handler);
+    }
+
+    //% blockId=platformer_onSpriteRuleBecomesTrue
+    //% block="$target on state $rule $condition with $sprite"
+    //% target.shadow=variables_get
+    //% target.defl=mySprite
+    //% rule.shadow=arcade_mp_character_make_rule
+    //% handlerStatement=true
+    //% draggableParameters="reporter"
+    //% group="Events"
+    //% weight=90
+    export function onSpriteRuleBecomesTrue(target: Sprite, rule: number, condition: EventHandlerCondition, handler: (sprite: PlatformerSprite) => void) {
+        _assertPlatformerSprite(target);
+        (target as PlatformerSprite).addEventHandler(rule, condition, handler);
+    }
+
+    //% group="Settings"
+    //% blockId=platformerSetGravity
+    //% block="set gravity $strength||$direction"
+    //% strength.defl=500
+    //% direction.shadow=platformer_direction
+    export function setGravity(strength: number, direction?: number) {
+        _state().setGravity(strength, direction == undefined ? Direction.Down : direction);
+    }
+
+    //% group="Settings"
     //% blockId=platformerSetFeatureEnabled
     //% block="set feature $feature $enabled"
     //% feature.shadow=platformer_feature
@@ -168,28 +411,11 @@ namespace platformer {
         _state().setTemplateFlag(feature, enabled);
     }
 
+    //% group="Settings"
     //% blockId=platformerSetConstantDefault
     //% block="set default value for $constant to $value"
     //% constant.shadow=platformer_constant
     export function setConstantDefault(constant: number, value: number) {
         _state().setGlobalConstant(constant, value);
-    }
-
-    //% blockId=platformerSetConstant
-    //% block="$sprite set value for $constant to $value"
-    //% sprite.shadow=variables_get
-    //% sprite.defl=mySprite
-    //% constant.shadow=platformer_constant
-    export function setConstant(sprite: PlatformerSprite, constant: number, value: number) {
-        sprite.constants.setValue(constant, value);
-    }
-
-    //% blockId=platformerHasState
-    //% block="$sprite has state $flag"
-    //% sprite.shadow=variables_get
-    //% sprite.defl=mySprite
-    //% flag.shadow=platformer_state
-    export function hasState(sprite: PlatformerSprite, flag: number) {
-        return sprite.hasState(flag);
     }
 }
