@@ -15,41 +15,86 @@ let mySprite = platformer.create(img`
     3 3 3 3 3 3 3 3
     3 3 3 3 3 3 3 3
     3 3 3 3 3 3 3 3
-    `, SpriteKind.Player)
+    `, SpriteKind.Player) as platformer.PlatformerSprite;
 mySprite.setPlatformerFlag(platformer.PlatformerFlags.WallJumps, true);
 scene.cameraFollowSprite(mySprite)
-platformer.setGravity(1000, platformer.Direction.Down)
+platformer.setGravity(200, platformer.Direction.Down)
 platformer.moveSprite(
     mySprite,
     true,
     100
 )
 
+
+const left = img`
+    3 3 3 1 3 3 3 3
+    3 3 1 1 3 3 3 3
+    3 1 1 1 3 3 3 3
+    1 1 1 1 1 1 1 1
+    1 1 1 1 1 1 1 1
+    3 1 1 1 3 3 3 3
+    3 3 1 1 3 3 3 3
+    3 3 3 1 3 3 3 3
+    `
+
+const right = img`
+    3 3 3 3 1 3 3 3
+    3 3 3 3 1 1 3 3
+    3 3 3 3 1 1 1 3
+    1 1 1 1 1 1 1 1
+    1 1 1 1 1 1 1 1
+    3 3 3 3 1 1 1 3
+    3 3 3 3 1 1 3 3
+    3 3 3 3 1 3 3 3
+    `
+
+const left2 = img`
+    2 2 1 2 2
+    2 1 1 2 2
+    1 1 1 2 2
+    2 1 1 2 2
+    2 2 1 2 2
+`
+
+const right2 = img`
+    2 2 1 2 2
+    2 2 1 1 2
+    2 2 1 1 1
+    2 2 1 1 2
+    2 2 1 2 2
+`
+
+platformer.loopFrames(mySprite, [left], 100, platformer.rule(platformer.PlatformerSpriteState.FacingLeft));
+platformer.loopFrames(mySprite, [right], 100, platformer.rule(platformer.PlatformerSpriteState.FacingRight));
+
+
 platformer.setConstant(mySprite, platformer.PlatformerConstant.WallJumpHeight, 16)
-platformer.setConstant(mySprite, platformer.PlatformerConstant.WallJumpKickoffVelocity, 200)
+platformer.setConstant(mySprite, platformer.PlatformerConstant.WallJumpKickoffVelocity, 50)
 
 
-let testEnemy = platformer.create(img`
-    2 2 2 2 2
-    2 2 2 2 2
-    2 2 2 2 2
-    2 2 2 2 2
-    2 2 2 2 2
-`, SpriteKind.Enemy);
+// let testEnemy = platformer.create(img`
+//     2 2 2 2 2
+//     2 2 2 2 2
+//     2 2 2 2 d
+//     2 2 2 2 2
+//     2 2 2 2 2
+// `, SpriteKind.Enemy) as platformer.PlatformerSprite;
 
-testEnemy.setMoving(platformer.MovingDirection.Right);
-game.onUpdate(() => {
-    if (testEnemy.hasState(platformer.PlatformerSpriteState.PushingWallRight)) {
-        testEnemy.setMoving(platformer.MovingDirection.Left)
-    }
-    if (testEnemy.hasState(platformer.PlatformerSpriteState.PushingWallLeft)) {
-        testEnemy.setMoving(platformer.MovingDirection.Right)
-    }
+// testEnemy.setMoving(platformer.MovingDirection.Right);
+// platformer.loopFrames(testEnemy, [left2], 100, platformer.rule(platformer.PlatformerSpriteState.FacingLeft));
+// platformer.loopFrames(testEnemy, [right2], 100, platformer.rule(platformer.PlatformerSpriteState.FacingRight));
+// game.onUpdate(() => {
+//     if (testEnemy.hasState(platformer.PlatformerSpriteState.PushingWallRight)) {
+//         testEnemy.setMoving(platformer.MovingDirection.Left)
+//     }
+//     if (testEnemy.hasState(platformer.PlatformerSpriteState.PushingWallLeft)) {
+//         testEnemy.setMoving(platformer.MovingDirection.Right)
+//     }
 
-    if (Math.percentChance(5) && testEnemy.hasState(platformer.PlatformerSpriteState.OnGround)) {
-        testEnemy.jump(32);
-    }
-});
+//     if (Math.percentChance(5) && testEnemy.hasState(platformer.PlatformerSpriteState.OnGround)) {
+//         testEnemy.jump(32);
+//     }
+// });
 
 controller.menu.onEvent(ControllerButtonEvent.Pressed, () => {
     platformer.moveSprite(
@@ -129,9 +174,15 @@ platformer.onRuleBecomesTrue(platformer.rule(platformer.PlatformerSpriteState.Ju
 })
 
 
-platformer.setConstant(mySprite, platformer.PlatformerConstant.InAirJumps, 2);
+platformer.setConstant(mySprite, platformer.PlatformerConstant.InAirJumps, 0);
+platformer.setConstant(mySprite, platformer.PlatformerConstant.WallMinVelocity, 0);
+platformer.setConstant(mySprite, platformer.PlatformerConstant.WallFriction, 99999);
 
 controller.B.onEvent(ControllerButtonEvent.Pressed, () => {
+    platformer.jump(mySprite, 16);
+})
+
+function dash() {
     platformer.setGravityEnabled(mySprite, false);
     platformer.moveSprite(mySprite, false);
     platformer.setFrictionEnabled(mySprite, false);
@@ -151,4 +202,4 @@ controller.B.onEvent(ControllerButtonEvent.Pressed, () => {
         platformer.moveSprite(mySprite, true, 100);
         platformer.setFrictionEnabled(mySprite, true);
     }, 100);
-})
+}

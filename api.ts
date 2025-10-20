@@ -127,18 +127,8 @@ namespace platformer {
     //% weight=100
     //% img.shadow=screen_image_picker
     //% kind.shadow=spritekind
-    export function create(img: Image, kind?: number): PlatformerSprite {
-        const scene = game.currentScene();
-        const sprite = new PlatformerSprite(img)
-        sprite.setKind(kind);
-        scene.physicsEngine.addSprite(sprite);
-
-        // run on created handlers
-        scene.createdHandlers
-            .filter(h => h.kind == kind)
-            .forEach(h => h.handler(sprite));
-
-        return sprite
+    export function create(img: Image, kind?: number): Sprite {
+        return new PlatformerSprite(img, kind);
     }
 
     /**
@@ -155,6 +145,7 @@ namespace platformer {
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
     //% constant.shadow=platformer_constant
+    //% weight=90
     export function setConstant(sprite: Sprite, constant: number, value: number) {
         _assertPlatformerSprite(sprite);
 
@@ -175,10 +166,24 @@ namespace platformer {
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
     //% flag.shadow=platformer_state
+    //% weight=80
     export function hasState(sprite: Sprite, flag: number) {
         _assertPlatformerSprite(sprite);
 
         return (sprite as PlatformerSprite).hasState(flag);
+    }
+
+    /**
+     * Returns true if the given sprite is a Platformer Sprite.
+     */
+    //% group="Create"
+    //% blockId=platformerIsPlatformerSprite
+    //% block="is $sprite a platformer sprite"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% weight=0
+    export function isPlatformerSprite(sprite: Sprite): boolean {
+        return sprite instanceof PlatformerSprite;
     }
 
     /**

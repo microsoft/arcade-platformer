@@ -1,5 +1,5 @@
 namespace platformer {
-    class CharacterAnimation {
+    export class CharacterAnimation {
         startFrames: Image[];
         loopFrames: Image[];
         startInterval: number;
@@ -9,7 +9,7 @@ namespace platformer {
         }
     }
 
-    class CharacterState {
+    export class CharacterState {
         protected animations: CharacterAnimation[];
 
         protected timer: number;
@@ -18,8 +18,6 @@ namespace platformer {
         protected enabled: boolean;
         protected runningStartFrames: boolean;
 
-        protected renderable: scene.Renderable;
-
         protected currentImage: Image;
 
         constructor(public sprite: PlatformerSprite) {
@@ -27,39 +25,33 @@ namespace platformer {
             this.timer = 0;
             this.frame = 0;
             this.setEnabled(true);
+        }
 
-            this.renderable = scene.createRenderable(this.sprite.z + 1, (target, camera) => {
-                if (!this.enabled || !this.currentImage) return;
+        draw(target: Image, camera: scene.Camera) {
+            if (!this.shouldDraw()) return;
 
-                if (this.sprite.flags & sprites.Flag.Destroyed) {
-                    this.renderable.destroy();
-                    _state().animations.characters.removeElement(this);
-                    return;
-                }
+            let drawX = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetX;
+            let drawY = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetY;
+            switch (_state().gravityDirection) {
+                case Direction.Down:
+                    drawX += this.sprite.x - (this.currentImage.width / 2);
+                    drawY += this.sprite.bottom - this.currentImage.height;
+                    break;
+                case Direction.Up:
+                    drawX += this.sprite.x - (this.currentImage.width / 2);
+                    drawY += this.sprite.top;
+                    break;
+                case Direction.Right:
+                    drawX += this.sprite.right - this.currentImage.width;
+                    drawY += this.sprite.y - (this.currentImage.height / 2);
+                    break;
+                case Direction.Left:
+                    drawX += this.sprite.left;
+                    drawY += this.sprite.y - (this.currentImage.height / 2);
+                    break;
+            }
 
-                let drawX = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetX;
-                let drawY = (this.sprite.flags & SpriteFlag.RelativeToCamera) ? 0 : -camera.drawOffsetY;
-                switch (_state().gravityDirection) {
-                    case Direction.Down:
-                        drawX += this.sprite.x - (this.currentImage.width / 2);
-                        drawY += this.sprite.bottom - this.currentImage.height;
-                        break;
-                    case Direction.Up:
-                        drawX += this.sprite.x - (this.currentImage.width / 2);
-                        drawY += this.sprite.top;
-                        break;
-                    case Direction.Right:
-                        drawX += this.sprite.right - this.currentImage.width;
-                        drawY += this.sprite.y - (this.currentImage.height / 2);
-                        break;
-                    case Direction.Left:
-                        drawX += this.sprite.left;
-                        drawY += this.sprite.y - (this.currentImage.height / 2);
-                        break;
-                }
-
-                target.drawTransparentImage(this.currentImage, drawX, drawY);
-            })
+            target.drawTransparentImage(this.currentImage, drawX, drawY);
         }
 
         setFrames(loop: boolean, frames: Image[], interval: number, rule: number) {
@@ -163,8 +155,6 @@ namespace platformer {
             }
 
             if (!enabled) this.currentImage = undefined;
-
-            this.sprite.setFlag(SpriteFlag.Invisible, enabled);
         }
 
         clearAnimations() {
@@ -189,6 +179,13 @@ namespace platformer {
             }
         }
 
+        getCurrentImage() {
+            if (this.shouldDraw()) {
+                return this.currentImage;
+            }
+            return undefined;
+        }
+
         protected pickRule(state: number) {
             // If we have multiple animations with the same best score, we
             // want to prioritize the current animation and then the rest
@@ -209,6 +206,10 @@ namespace platformer {
 
             return best;
         }
+
+        shouldDraw() {
+            return this.enabled && this.currentImage && !(this.sprite.flags & sprites.Flag.Destroyed);
+        }
     }
 
     function score(state: number, rule: number) {
@@ -227,19 +228,6 @@ namespace platformer {
 
     export function _matchesRule(state: number, rule: number) {
         return !((state & rule) ^ rule);
-    }
-
-    export class _PlatformerAnimationState {
-        characters: CharacterState[];
-
-        constructor() {
-            this.characters = [];
-
-            game.currentScene().eventContext.registerFrameHandler(scene.ANIMATION_UPDATE_PRIORITY, () => {
-                const dt = game.currentScene().eventContext.deltaTimeMillis;
-                for (const character of this.characters) character.update(dt);
-            });
-        }
     }
 
     /**
@@ -401,21 +389,39 @@ namespace platformer {
         return rule;
     }
 
+    /**
+     * Gets the current image being drawn for a platformer sprite. If the sprite is animating,
+     * this will return the current frame of the animation; otherwise, it will return the
+     * sprite's base image.
+     */
+    //% blockId=arcade_mp_character_get_current_image
+    //% block="current image of $sprite"
+    //% sprite.shadow=variables_get
+    //% sprite.defl=mySprite
+    //% weight=0
+    //% group="Animations"
+    export function getCurrentImage(sprite: Sprite): Image {
+        _assertPlatformerSprite(sprite);
+        const state = getStateForSprite(sprite as PlatformerSprite, false);
+
+        if (state) {
+            return state.getCurrentImage() || sprite.image;
+        }
+
+        return sprite.image;
+    }
+
     function getStateForSprite(sprite: PlatformerSprite, createIfNotFound: boolean) {
         if (!sprite) return undefined;
 
-        const sceneState = _state().animations;
-        for (const state of sceneState.characters) {
-            if (state.sprite === sprite) {
-                return state;
-            }
+        if (sprite.animationState) {
+            return sprite.animationState;
+        }
+        else if (createIfNotFound) {
+            sprite.animationState = new CharacterState(sprite);
+            return sprite.animationState;
         }
 
-        if (createIfNotFound) {
-            const newState = new CharacterState(sprite);
-            sceneState.characters.push(newState);
-            return newState;
-        }
         return undefined;
     }
 }

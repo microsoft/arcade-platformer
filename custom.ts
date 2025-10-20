@@ -12,7 +12,8 @@ namespace platformer {
         WallJumps = 1 << 9,
         LastWallLeft = 1 << 10,
         Friction = 1 << 11,
-        Gravity = 1 << 12
+        Gravity = 1 << 12,
+        ForcedJump = 1 << 13
     }
 
     class PlatformerConstants {
@@ -75,7 +76,7 @@ namespace platformer {
 
     const globalConstants = createDefaultConstants();
 
-    export class PlatformerSprite extends Sprite {
+    export class PlatformerSprite extends sprites.ExtendableSprite {
         pFlags: number;
         sFlags: number;
         jumpStartTime: number;
@@ -91,8 +92,10 @@ namespace platformer {
         eventHandlers: EventHandler[];
         jumpCount: number;
 
-        constructor(img: Image) {
-            super(img);
+        animationState: CharacterState;
+
+        constructor(img: Image, kind?: number) {
+            super(img, kind);
 
             this.setGravity(_state().gravity, _state().gravityDirection);
             _state().allSprites.push(this);
@@ -166,7 +169,9 @@ namespace platformer {
                 this,
                 _state().gravity,
                 _state().gravityDirection,
-                pixels || this.constants.lookupValue(PlatformerConstant.MaxJumpHeight)
+                pixels || this.constants.lookupValue(PlatformerConstant.MaxJumpHeight),
+                undefined,
+                true
             );
         }
 
@@ -188,6 +193,21 @@ namespace platformer {
             }
             this.eventHandlers.push(new EventHandler(rule, condition, handler));
         }
+
+        draw(drawLeft: number, drawTop: number) {
+            if (this.animationState && this.animationState.shouldDraw()) {
+                this.animationState.draw(screen, game.currentScene().camera);
+            }
+            else {
+                super.draw(drawLeft, drawTop);
+            }
+        }
+
+        update(deltaTimeMillis: number) {
+            if (this.animationState) {
+                this.animationState.update(deltaTimeMillis);
+            }
+        }
     }
 
     let stateStack: PlatformerState[];
@@ -206,7 +226,6 @@ namespace platformer {
         aButtonIsPressed: boolean[];
         aButtonIsPressedLastFrame: boolean[];
 
-        animations: _PlatformerAnimationState;
         handlers: EventHandler[];
 
         constructor() {
@@ -214,7 +233,6 @@ namespace platformer {
             this.gravityDirection = Direction.Down;
 
             this.allSprites = [];
-            this.animations = new _PlatformerAnimationState();
             this.handlers = [];
 
             game.currentScene().eventContext.registerFrameHandler(scene.CONTROLLER_SPRITES_PRIORITY, () => {
@@ -618,12 +636,12 @@ namespace platformer {
                 }
 
                 onWall = sprite.hasState(PlatformerSpriteState.OnWallLeft | PlatformerSpriteState.OnWallRight);
+                sprite.setStateFlag(PlatformerSpriteState.Falling, false);
 
                 if (onGround) {
                     sprite.jumpCount = 0;
                     sprite.lastOnGroundTime = game.runtime();
                     sprite.setStateFlag(PlatformerSpriteState.AfterJumpApex, false);
-                    sprite.setStateFlag(PlatformerSpriteState.Falling, false);
                 }
                 else if (!sprite.hasState(PlatformerSpriteState.AfterJumpApex | PlatformerSpriteState.JumpingUp)) {
                     sprite.setStateFlag(PlatformerSpriteState.Falling, true)
@@ -668,7 +686,7 @@ namespace platformer {
                         sprite.setStateFlag(PlatformerSpriteState.AfterJumpApex, true);
                     }
 
-                    if (sprite.pFlags & PlatformerFlags.AllowJumpCancellation) {
+                    if (sprite.pFlags & PlatformerFlags.AllowJumpCancellation && !(sprite.pFlags & PlatformerFlags.ForcedJump)) {
                         if (sprite.pFlags & PlatformerFlags.JumpOnAPressed && !this.aButtonIsPressed[pIndex] && sprite.pFlags & PlatformerFlags.JumpStartedWithA) {
                             cancelJump(sprite, this.gravityDirection);
                         }
@@ -710,18 +728,19 @@ namespace platformer {
                 if (sprite.pFlags & PlatformerFlags.WallJumps) {
                     switch (_state().gravityDirection) {
                         case Direction.Down:
-                            shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) > 0;
+                            shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) >= 0;
                             break;
                         case Direction.Up:
-                            shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) < 0;
+                            shouldApplyFriction = Fx.compare(sprite._vy, Fx.zeroFx8) <= 0;
                             break;
                         case Direction.Left:
-                            shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) < 0;
+                            shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) <= 0;
                             break;
                         case Direction.Right:
-                            shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) > 0;
+                            shouldApplyFriction = Fx.compare(sprite._vx, Fx.zeroFx8) >= 0;
                             break;
                     }
+
 
                     shouldApplyFriction = shouldApplyFriction && onWall;
 
@@ -747,6 +766,12 @@ namespace platformer {
                             }
                         }
                     }
+
+
+                    // if (sprite.data.shouldApplyFriction !== shouldApplyFriction) {
+                    //     console.log("shouldApplyFriction: " + shouldApplyFriction + " onWall: " + onWall + " " + sprite._vy);
+                    // }
+                    // sprite.data.shouldApplyFriction = shouldApplyFriction;
 
                     // Wall friction
                     if (onWall && !didWallJump) {
@@ -867,16 +892,20 @@ namespace platformer {
         }
     }
 
-    function startJump(sprite: PlatformerSprite, gravityStr: number, gravityDir: Direction, jumpHeight: number, kickoffVelocity = 0) {
+    function startJump(sprite: PlatformerSprite, gravityStr: number, gravityDir: Direction, jumpHeight: number, kickoffVelocity = 0, forced = false) {
         switch (gravityDir) {
             case Direction.Down:
                 sprite.vy = -Math.sqrt(2 * gravityStr * jumpHeight);
                 if (kickoffVelocity) {
                     if (sprite.pFlags & PlatformerFlags.LastWallLeft) {
                         sprite.vx = kickoffVelocity;
+                        sprite.setStateFlag(PlatformerSpriteState.FacingRight, true);
+                        sprite.setStateFlag(PlatformerSpriteState.FacingLeft, false);
                     }
                     else {
                         sprite.vx = -kickoffVelocity;
+                        sprite.setStateFlag(PlatformerSpriteState.FacingRight, false);
+                        sprite.setStateFlag(PlatformerSpriteState.FacingLeft, true);
                     }
                 }
                 break;
@@ -885,9 +914,13 @@ namespace platformer {
                 if (kickoffVelocity) {
                     if (sprite.pFlags & PlatformerFlags.LastWallLeft) {
                         sprite.vx = kickoffVelocity;
+                        sprite.setStateFlag(PlatformerSpriteState.FacingRight, true);
+                        sprite.setStateFlag(PlatformerSpriteState.FacingLeft, false);
                     }
                     else {
                         sprite.vx = -kickoffVelocity;
+                        sprite.setStateFlag(PlatformerSpriteState.FacingRight, false);
+                        sprite.setStateFlag(PlatformerSpriteState.FacingLeft, true);
                     }
                 }
                 break;
@@ -896,9 +929,13 @@ namespace platformer {
                 if (kickoffVelocity) {
                     if (sprite.pFlags & PlatformerFlags.LastWallLeft) {
                         sprite.vy = kickoffVelocity;
+                        sprite.setStateFlag(PlatformerSpriteState.FacingRight, true);
+                        sprite.setStateFlag(PlatformerSpriteState.FacingLeft, false);
                     }
                     else {
                         sprite.vy = -kickoffVelocity;
+                        sprite.setStateFlag(PlatformerSpriteState.FacingRight, false);
+                        sprite.setStateFlag(PlatformerSpriteState.FacingLeft, true);
                     }
                 }
                 break;
@@ -907,14 +944,19 @@ namespace platformer {
                 if (kickoffVelocity) {
                     if (sprite.pFlags & PlatformerFlags.LastWallLeft) {
                         sprite.vy = kickoffVelocity;
+                        sprite.setStateFlag(PlatformerSpriteState.FacingRight, true);
+                        sprite.setStateFlag(PlatformerSpriteState.FacingLeft, false);
                     }
                     else {
                         sprite.vy = -kickoffVelocity;
+                        sprite.setStateFlag(PlatformerSpriteState.FacingRight, false);
+                        sprite.setStateFlag(PlatformerSpriteState.FacingLeft, true);
                     }
                 }
                 break;
         }
 
+        sprite.setPlatformerFlag(PlatformerFlags.ForcedJump, forced);
         sprite.setPlatformerFlag(PlatformerFlags.CurrentlyJumping, true);
         sprite.setStateFlag(PlatformerSpriteState.JumpingUp, true);
         sprite.setStateFlag(PlatformerSpriteState.Falling, false);
@@ -994,7 +1036,7 @@ namespace platformer {
 
         if (sprite.hasState(PlatformerSpriteState.OnWallLeft)) {
             if (gravityDir === Direction.Down || gravityDir === Direction.Up) {
-                for (let i = top; i <= bottom; i++) {
+                for (let i = Math.max(top, 0); i <= Math.min(bottom, tilemap.height - 1); i++) {
                     if (tilemap.isWall(left, i) || tilemap.isOutsideMap(left, i)) {
                         sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, true);
                         return;
@@ -1002,7 +1044,7 @@ namespace platformer {
                 }
             }
             else {
-                for (let i = left; i <= right; i++) {
+                for (let i = Math.max(left, 0); i <= Math.min(right, tilemap.width - 1); i++) {
                     if (tilemap.isWall(i, top) || tilemap.isOutsideMap(i, top)) {
                         sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, true);
                         return;
@@ -1014,7 +1056,7 @@ namespace platformer {
 
         if (sprite.hasState(PlatformerSpriteState.OnWallRight)) {
             if (gravityDir === Direction.Down || gravityDir === Direction.Up) {
-                for (let i = top; i <= bottom; i++) {
+                for (let i = Math.max(top, 0); i <= Math.min(bottom, tilemap.height - 1); i++) {
                     if (tilemap.isWall(right, i) || tilemap.isOutsideMap(right, i)) {
                         sprite.setStateFlag(PlatformerSpriteState.OnWallRight, true);
                         return;
@@ -1022,7 +1064,7 @@ namespace platformer {
                 }
             }
             else {
-                for (let i = left; i <= right; i++) {
+                for (let i = Math.max(left, 0); i <= Math.min(right, tilemap.width - 1); i++) {
                     if (tilemap.isWall(i, bottom) || tilemap.isOutsideMap(i, bottom)) {
                         sprite.setStateFlag(PlatformerSpriteState.OnWallRight, true);
                         return;
@@ -1060,9 +1102,5 @@ namespace platformer {
         if (!isPlatformerSprite(sprite)) {
             throw "arcade-platformer functions can only be used on Platformer Sprites!";
         }
-    }
-
-    export function isPlatformerSprite(sprite: Sprite) {
-        return sprite instanceof PlatformerSprite;
     }
 }
