@@ -621,7 +621,8 @@ namespace platformer {
         handleJumping() {
             const currentTime = game.runtime();
 
-            const tilemap = game.currentScene().tileMap.data;
+            const tm = game.currentScene().tileMap;
+            const tilemap = tm ? tm.data : null;
             let onGround = false;
             let onWall = false;
             for (const sprite of this.allSprites) {
@@ -1001,7 +1002,7 @@ namespace platformer {
         }
     }
 
-    function updateWallState(sprite: PlatformerSprite, gravityDir: Direction, tilemap: tiles.TileMapData) {
+    function updateWallState(sprite: PlatformerSprite, gravityDir: Direction, tilemap: tiles.TileMapData | null) {
         let leftDirection: CollisionDirection;
         let rightDirection: CollisionDirection;
 
@@ -1026,6 +1027,12 @@ namespace platformer {
         else if (sprite.isHittingTile(rightDirection)) {
             sprite.setStateFlag(PlatformerSpriteState.OnWallRight, true);
             sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, false);
+            return;
+        }
+
+        if (!tilemap) {
+            sprite.setStateFlag(PlatformerSpriteState.OnWallLeft, false);
+            sprite.setStateFlag(PlatformerSpriteState.OnWallRight, false);
             return;
         }
 

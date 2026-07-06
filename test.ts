@@ -96,13 +96,13 @@ platformer.setConstant(mySprite, platformer.PlatformerConstant.WallJumpKickoffVe
 //     }
 // });
 
-controller.menu.onEvent(ControllerButtonEvent.Pressed, () => {
-    platformer.moveSprite(
-        mySprite,
-        !(mySprite.pFlags & platformer.PlatformerFlags.ControlsEnabled),
-        100
-    )
-})
+// controller.menu.onEvent(ControllerButtonEvent.Pressed, () => {
+//     platformer.moveSprite(
+//         mySprite,
+//         !(mySprite.pFlags & platformer.PlatformerFlags.ControlsEnabled),
+//         100
+//     )
+// })
 
 let printedSprite = mySprite;
 game.onShade(() => {
